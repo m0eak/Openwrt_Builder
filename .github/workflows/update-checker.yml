@@ -12,13 +12,13 @@
 name: Update Checker
 
 env:
-  REPO_URL: https://github.com/coolsnowwolf/lede
-  REPO_BRANCH: master
+  REPO_URL: https://github.com/zheshifandian/openwrt-ax1800
+  REPO_BRANCH: stable
 
 on:
   workflow_dispatch:
-#  schedule:
-#    - cron: 0 */18 * * *
+  schedule:
+   - cron: 0 16 * * *
 
 jobs:
   check:
@@ -55,4 +55,4 @@ jobs:
       uses: GitRML/delete-workflow-runs@main
       with:
         retain_days: 1
-        keep_minimum_runs: 1
+        keep_minimum_runs: 2
