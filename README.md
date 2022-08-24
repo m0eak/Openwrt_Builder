@@ -9,6 +9,7 @@
 A template for building OpenWrt with GitHub Actions
 
 Base on [lean 的 IPQ60xx 仓库](https://github.com/coolsnowwolf/openwrt-gl-ax1800)
+
 Use [zheshifandian 仓库](https://github.com/zheshifandian/openwrt-ax1800)
 
 ## Usage
