@@ -16,6 +16,7 @@ A template for building OpenWrt with GitHub Actions
 - Select `Build OpenWrt` on the Actions page.
 - Click the `Run workflow` button.
 - When the build is complete, click the `Artifacts` button in the upper right corner of the Actions page to download the binaries.
+- ./scripts/diffconfig.sh > seed.config
 
 ## Tips
 
