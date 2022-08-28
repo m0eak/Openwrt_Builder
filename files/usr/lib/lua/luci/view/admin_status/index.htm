@@ -701,6 +701,11 @@
 		<tr><td width="33%"><%:Hostname%></td><td><%=luci.sys.hostname() or "?"%></td></tr>
 		<tr><td width="33%"><%:Model%></td><td><%=pcdata(boardinfo.model or "?")%> <%=luci.sys.exec("cat /etc/bench.log") or " "%></td></tr>
 		<tr><td width="33%"><%:Architecture%></td><td><%=pcdata(boardinfo.system or "?")%> x <%=luci.sys.exec("cat /proc/cpuinfo | grep 'processor' | wc -l") or "1"%></td></tr>
+		<tr><td width="33%"><%:CPU Info%></td><td>
+        		Temp: <%=luci.sys.exec("cat /sys/class/thermal/thermal_zone0/temp")%>  ,
+        		Cur Freq: <%=luci.sys.exec("cat /sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq") / 1000 %> MHz ,
+        		Max Freq: <%=luci.sys.exec("cat /sys/devices/system/cpu/cpufreq/policy0/scaling_max_freq") / 1000 %> MHz
+		</td></tr>
 		<tr><td width="33%"><%:Target Platform%></td><td><%=pcdata(boardinfo.release.target or "?")%></td></tr>
 		<tr><td width="33%"><%:Firmware Version%></td><td>
 			<%=pcdata(ver.distname)%> <%=pcdata(ver.distversion)%> /
@@ -711,7 +716,6 @@
 		<tr><td width="33%"><%:Uptime%></td><td id="uptime">-</td></tr>
 		<tr><td width="33%"><%:Load Average%></td><td id="loadavg">-</td></tr>
 		<tr><td width="33%"><%:CPU usage (%)%></td><td id="cpuusage">-</td></tr>
-		<tr><td width="33%"><%:CPU TEMP%></td><td><%=luci.sys.exec("cat /sys/class/thermal/thermal_zone0/temp") or "1"%></td></tr>
 	</table>
 </fieldset>
 
