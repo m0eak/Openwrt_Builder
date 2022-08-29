@@ -24,4 +24,4 @@ echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >>feeds.conf
 echo 'src-git luci https://github.com/zheshifandian/luci.git;axt1800' >>feeds.conf.default
 echo 'src-git kenzo https://github.com/kenzok8/openwrt-packages' >>feeds.conf.default
 echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
-echo 'src-git alist https://github.com/sbwml/luci-app-alist' >>feeds.conf.default
+echo 'src-git NueXini_Packages https://github.com/NueXini/NueXini_Packages' >>feeds.conf.default
