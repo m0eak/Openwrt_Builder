@@ -23,4 +23,5 @@ echo 'src-git telephony https://github.com/openwrt/telephony.git;openwrt-21.02' 
 echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >>feeds.conf.default
 echo 'src-git luci https://github.com/zheshifandian/luci.git;axt1800' >>feeds.conf.default
 echo 'src-git kenzo https://github.com/kenzok8/openwrt-packages' >>feeds.conf.default
+echo 'src-git smallpackage https://github.com/kenzok8/small-package' >>feeds.conf.default
 echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
