@@ -21,7 +21,7 @@ echo 'src-git packages https://github.com/zheshifandian/packages.git;axt1800' >>
 echo 'src-git routing https://github.com/openwrt/routing.git;openwrt-19.07' >>feeds.conf.default
 echo 'src-git telephony https://github.com/openwrt/telephony.git;openwrt-21.02' >>feeds.conf.default
 echo 'src-git openclash https://github.com/vernesong/OpenClash.git' >>feeds.conf.default
+echo 'src-git smallpackage https://github.com/kenzok8/small-package' >>feeds.conf.default
 echo 'src-git luci https://github.com/zheshifandian/luci.git;axt1800' >>feeds.conf.default
 echo 'src-git kenzo https://github.com/kenzok8/openwrt-packages' >>feeds.conf.default
-echo 'src-git smallpackage https://github.com/kenzok8/small-package' >>feeds.conf.default
 echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
