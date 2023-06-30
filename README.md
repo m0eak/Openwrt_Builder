@@ -6,9 +6,7 @@
 ![GitHub Stars](https://img.shields.io/github/stars/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Stars&logo=github)
 ![GitHub Forks](https://img.shields.io/github/forks/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Forks&logo=github)
 
-Base on [lean 的 IPQ60xx 仓库](https://github.com/coolsnowwolf/openwrt-gl-ax1800)
-
-Use [zheshifandian 仓库](https://github.com/zheshifandian/openwrt-ax1800)
+Base on [JiaY-shi/openwrt](https://github.com/JiaY-shi/openwrt.git)
 
 ## Usage
 
