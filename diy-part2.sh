@@ -11,6 +11,6 @@
 #
 
 # Modify default IP
-#sed -i 's/192.168.1.1/192.168.50.5/g' package/base-files/files/bin/config_generate
+sed -i 's/192.168.1.1/192.168.8.1/g' package/base-files/files/bin/config_generate
 # Modify Openwrt to AXT1800
-#sed -i 's/'OpenWrt'/'AXT1800'/g' package/base-files/files/bin/config_generate
+sed -i 's/'OpenWrt'/'GL-AXT1800'/g' package/base-files/files/bin/config_generate
