@@ -2,8 +2,8 @@
 uci set turboacc.config.sw_flow='0'
 uci commit turboacc
 echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
-opkg install /tmp/fan-control_2-26_all.ipk
-cp /tmp/fan_monitor /usr/sbin/fan_monitor
+opkg install /usr/share/fan-control_2-26_all.ipk
+cp /usr/share/fan_monitor /usr/sbin/fan_monitor
 chmod +x /usr/sbin/fan_monitor
 /etc/init.d/fan_control restart
 exit 0
