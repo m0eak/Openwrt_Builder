@@ -22,4 +22,86 @@ sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '1'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
+config_content="
+config dns_servers
+	option enabled '1'
+	option group 'nameserver'
+	option type 'tcp'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'nameserver'
+	option type 'udp'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'nameserver'
+	option type 'tls'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'nameserver'
+	option type 'https'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'fallback'
+	option type 'tcp'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'fallback'
+	option type 'udp'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'fallback'
+	option type 'tls'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+
+config dns_servers
+	option enabled '1'
+	option group 'fallback'
+	option type 'https'
+	option interface 'Disable'
+	option node_resolve '0'
+	option specific_group 'Disable'
+	option ip '127.0.0.1'
+	option port '5335'
+"
+echo "$config_content" >> /etc/config/openclash
 exit 0
