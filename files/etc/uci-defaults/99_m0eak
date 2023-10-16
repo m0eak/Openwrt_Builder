@@ -27,7 +27,7 @@ cp /usr/share/fan_monitor /usr/sbin/fan_monitor
 chmod +x /usr/sbin/fan_monitor
 /etc/init.d/fan_control restart
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
-sed -i "s/option holdoff '4'/option holdoff '1'/" /etc/config/luci
+sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
 config_content="
