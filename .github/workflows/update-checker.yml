@@ -12,8 +12,8 @@
 name: Update Checker
 
 env:
-  REPO_URL: https://github.com/zheshifandian/openwrt-ax1800
-  REPO_BRANCH: stable
+  REPO_URL: https://github.com/JiaY-shi/openwrt
+  REPO_BRANCH: ipq60xx-devel_nss
 
 on:
   workflow_dispatch:
