@@ -6,8 +6,6 @@
 ![GitHub Stars](https://img.shields.io/github/stars/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Stars&logo=github)
 ![GitHub Forks](https://img.shields.io/github/forks/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Forks&logo=github)
 
-Base on [JiaY-shi/openwrt](https://github.com/JiaY-shi/openwrt.git)
-
 ## Usage
 
 - Click the [Use this template](https://github.com/P3TERX/Actions-OpenWrt/generate) button to create a new repository.
