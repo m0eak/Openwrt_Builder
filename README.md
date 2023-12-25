@@ -25,7 +25,7 @@
 - [Microsoft Azure](https://azure.microsoft.com)
 - [GitHub Actions](https://github.com/features/actions)
 - [OpenWrt](https://github.com/openwrt/openwrt)
-- [Lean's OpenWrt](https://github.com/coolsnowwolf/lede)
+- [JiaY-shi/openwrt](https://github.com/JiaY-shi/openwrt.git)
 - [tmate](https://github.com/tmate-io/tmate)
 - [mxschmitt/action-tmate](https://github.com/mxschmitt/action-tmate)
 - [csexton/debugger-action](https://github.com/csexton/debugger-action)
