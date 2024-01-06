@@ -20,7 +20,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/JiaY-shi/openwrt.git
+  REPO_URL: https://github.com/m0eak/openwrt.git
   REPO_BRANCH: ipq60xx-devel_nss
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: .config
