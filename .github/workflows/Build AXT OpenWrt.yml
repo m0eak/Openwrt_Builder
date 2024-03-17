@@ -23,9 +23,9 @@ env:
   REPO_URL: https://github.com/JiaY-shi/openwrt.git
   REPO_BRANCH: ipq60xx-devel
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: .config
-  DIY_P1_SH: diy-part1.sh
-  DIY_P2_SH: diy-part2.sh
+  CONFIG_FILE: axt1800.config
+  DIY_P1_SH: axt-part1.sh
+  DIY_P2_SH: axt-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
