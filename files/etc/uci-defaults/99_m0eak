@@ -21,6 +21,8 @@
 #uci set system.cfg01e48a.conloglevel='8'
 #uci set system.cfg01e48a.cronloglevel='5'
 #uci commit system
+uci set luci.main.mediaurlbase='/luci-static/bootstrap'
+uci commit luci
 echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 opkg install /usr/share/fan-control_2-26_all.ipk
 cp /usr/share/fan_monitor /usr/sbin/fan_monitor
