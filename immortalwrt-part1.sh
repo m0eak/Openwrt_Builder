@@ -22,3 +22,4 @@ echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
 echo 'src-git linkease_nas https://github.com/linkease/nas-packages-luci' >>feeds.conf.default
 echo 'src-git linkease_nas_package https://github.com/linkease/nas-packages.git' >>feeds.conf.default
 echo 'src-git istore https://github.com/linkease/istore.git' >>feeds.conf.default
+curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
