@@ -16,7 +16,7 @@ sed -i 's/192.168.1.1/192.168.100.100/g' package/base-files/files/bin/config_gen
 # Modify Openwrt to AXT1800
 # sed -i 's/'OpenWrt'/'GL-AXT1800'/g' package/base-files/files/bin/config_generate
 cd ./feeds/small
-rm -rf /mosdns 
-rm -rf /luci-app-mosdns 
+rm -rf mosdns 
+rm -rf luci-app-mosdns 
 cd ../..
 ./scripts/feeds install -a
