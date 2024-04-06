@@ -32,6 +32,7 @@ env:
   UPLOAD_WETRANSFER: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
+  TAG: 23.05.2
 
 jobs:
   build:
@@ -66,6 +67,7 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
+        git checkout $TAG
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: Update feeds
