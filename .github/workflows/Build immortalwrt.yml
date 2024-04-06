@@ -32,7 +32,7 @@ env:
   UPLOAD_WETRANSFER: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: 23.05.2
+  TAG: v23.05.2
 
 jobs:
   build:
