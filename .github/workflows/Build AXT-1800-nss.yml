@@ -8,7 +8,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build AXT OpenWrt
+name: Build AXT-1800-nss
 
 on:
   repository_dispatch:
@@ -21,7 +21,7 @@ on:
 
 env:
   REPO_URL: https://github.com/JiaY-shi/openwrt.git
-  REPO_BRANCH: ipq60xx-devel
+  REPO_BRANCH: ipq60xx-devel-nss
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: axt1800.config
   DIY_P1_SH: axt-part1.sh
@@ -158,7 +158,7 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
-        echo "::set-output name=release_tag::axt1800-$(date +"%Y.%m.%d-%H%M")"
+        echo "::set-output name=release_tag::axt1800-nss-$(date +"%Y.%m.%d-%H%M")"
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
@@ -184,7 +184,7 @@ jobs:
       uses: dev-drprasad/delete-older-releases@v0.1.0
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 4
+        keep_latest: 6
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
