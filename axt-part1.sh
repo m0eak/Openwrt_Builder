@@ -21,5 +21,5 @@ echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages' >>feeds.conf.
 echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
 echo 'src-git smoothwan https://github.com/SmoothWAN/SmoothWAN-feeds' >>feeds.conf.default
 # fix cpu_opp_table
-sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.1/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
-sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
+# sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.1/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
+# sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
