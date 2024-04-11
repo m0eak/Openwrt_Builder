@@ -31,7 +31,7 @@ jobs:
     - name: Get Commit Hash Repo 1
       id: getHashRepo1
       run: |
-        git clone --depth 1 ${{ env.REPO1_URL }} -b ${{ env.REPO1_BRANCH }} .
+        git clone --depth 1 ${{ env.REPO1_URL }} -b ${{ env.REPO1_BRANCH }}
         echo "::set-output name=commitHash::$(git rev-parse HEAD)"
 
     - name: Compare Commit Hash Repo 1
