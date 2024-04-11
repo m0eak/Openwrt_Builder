@@ -15,8 +15,10 @@
 sed -i 's/192.168.1.1/192.168.100.100/g' package/base-files/files/bin/config_generate
 # Modify Openwrt to AXT1800
 # sed -i 's/'OpenWrt'/'GL-AXT1800'/g' package/base-files/files/bin/config_generate
-cd ./feeds/small
-rm -rf mosdns 
-rm -rf luci-app-mosdns 
-cd ../..
+find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+find ./ | grep Makefile | grep mosdns | xargs rm -f
+
+git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+
 ./scripts/feeds install -a
