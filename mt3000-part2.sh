@@ -6,24 +6,17 @@
 # See /LICENSE for more information.
 #
 # https://github.com/P3TERX/Actions-OpenWrt
-# File name: diy-part1.sh
-# Description: OpenWrt DIY script part 1 (Before Update feeds)
+# File name: diy-part2.sh
+# Description: OpenWrt DIY script part 2 (After Update feeds)
 #
 
-# Uncomment a feed source
-#sed -i 's/^#\(.*helloworld\)/\1/' feeds.conf.default
+# Modify default IP
+sed -i 's/192.168.1.1/192.168.8.1/g' package/base-files/files/bin/config_generate
+# Modify ImmortalWrt to MT3000
+sed -i 's/'ImmortalWrt'/'GL-MT3000'/g' package/base-files/files/bin/config_generate
+find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
+find ./ | grep Makefile | grep mosdns | xargs rm -f
 
-# Add a feed source
-# echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
-# rm -rf feeds.conf.default
-# touch feeds.conf.default
-echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> "feeds.conf"
-# echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
-# echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages' >>feeds.conf.default
-# echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
-# echo 'src-git smoothwan https://github.com/SmoothWAN/SmoothWAN-feeds' >>feeds.conf.default
-# fix cpu_opp_table
-# sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.1/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
-# sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/;70s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
-# sed -i '39s/0x3/0xf/;47s/0x3/0xf/;55s/0x1/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0910-arm64-dts-qcom-ipq6018-change-voltage-to-perf-levels.patch
-
+git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
+git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+# ./scripts/feeds install -a
