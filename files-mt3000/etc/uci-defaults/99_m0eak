@@ -23,13 +23,7 @@
 #uci commit system
 uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
-uci set turboacc.config.bbr_cca='0'
-uci commit turbooacc
 echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
-#opkg install /usr/share/fan-control_2-26_all.ipk
-#cp /usr/share/fan_monitor /usr/sbin/fan_monitor
-#chmod +x /usr/sbin/fan_monitor
-#/etc/init.d/fan_control restart
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
