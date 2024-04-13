@@ -17,7 +17,7 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 # rm -rf feeds.conf.default
 # touch feeds.conf.default
-echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> "feeds.conf"
+echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >>feeds.conf.default
 # echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
 # echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages' >>feeds.conf.default
 # echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
