@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: '选择分支（测试）'
+        description: '选择分支（还没写好不要改）'
         required: true
         default: '23.05.2'
       ssh:
