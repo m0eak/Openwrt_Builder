@@ -17,7 +17,9 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 # rm -rf feeds.conf.default
 # touch feeds.conf.default
+# 添加自定义feeds
 echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >>feeds.conf.default
-
+# 打953 613补丁
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+# 调整cooling-levels
 wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/
