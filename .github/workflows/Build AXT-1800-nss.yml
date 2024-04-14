@@ -23,9 +23,9 @@ env:
   REPO_URL: https://github.com/JiaY-shi/openwrt.git
   REPO_BRANCH: ipq60xx-devel_nss
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: axt1800.config
-  DIY_P1_SH: axt-part1.sh
-  DIY_P2_SH: axt-part2.sh
+  CONFIG_FILE: ./config/axt1800.config
+  DIY_P1_SH: ./sh/axt-part1.sh
+  DIY_P2_SH: ./sh/axt-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
@@ -76,7 +76,7 @@ jobs:
 
     - name: Load custom configuration
       run: |
-        [ -e files-axt1800 ] && mv files-axt1800 openwrt/files
+        [ -e files ] && mv ./files/files-axt1800 openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
