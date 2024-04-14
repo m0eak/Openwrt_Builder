@@ -22,4 +22,5 @@ echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >>feeds.con
 # 修补的firewall4、libnftnl、nftables与952补丁
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
 # 调整cooling-levels
-wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/
+wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch 
+mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
