@@ -20,3 +20,4 @@
 echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >>feeds.conf.default
 
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/
