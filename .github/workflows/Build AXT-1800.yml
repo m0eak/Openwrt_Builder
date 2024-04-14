@@ -14,6 +14,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      nss:
+        description: '是否编译nss'
+        required: false
+        default: 'false'
       ssh:
         description: 'SSH connection to Actions'
         required: false
@@ -21,6 +25,7 @@ on:
 
 env:
   REPO_URL: https://github.com/JiaY-shi/openwrt.git
+  REPO_BRANCH_NSS: ipq60xx-devel-nss
   REPO_BRANCH: ipq60xx-devel
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
@@ -58,7 +63,14 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-        git clone $REPO_URL -b $REPO_BRANCH openwrt
+          if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
+            echo "Cloning ipq60xx-devel-nss branch..."
+            git clone --branch $REPO_BRANCH_NSS $REPO_URL openwrt
+          else
+            echo "Cloning ipq60xx-devel branch..."
+            git clone --branch $REPO_BRANCH $REPO_URL openwrt
+          fi
+        # git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
     - name: Load custom feeds
