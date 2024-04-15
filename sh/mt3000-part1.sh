@@ -26,11 +26,6 @@ wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-m
 mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
 # 固定内核版本值
 curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/mediatek/filogic/immortalwrt-23.05.2-mediatek-filogic.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
-#sed -i '121s|.*|        cp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic|' ./include/kernel-defaults.mk
-# sed -i '/^grep \'\=[ym]\' \$(LINUX_DIR)\/\.config\.set \| LC_ALL=C sort \| \$(MKHASH) md5 > \$(LINUX_DIR)\/\.vermagic$/c\cp \$(TOPDIR)\/vermagic \$(LINUX_DIR)\/.vermagic' ./include/kernel-defaults.mk
-# sed -i '121s|grep '\''=[ym]'\'' $(LINUX_DIR)/.config.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)/.vermagic|cp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic|' ./include/kernel-defaults.mk
-# sed -i '121s#grep '\''=[ym]'\'' $(LINUX_DIR)/.config.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)/.vermagic#cp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic#' ./include/kernel-defaults.mk
-# curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/mediatek/filogic/immortalwrt-23.05.2-mediatek-filogic.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
 sed -i '121s|^|# |' ./include/kernel-defaults.mk
 sed -i $'121a\\\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic\\' ./include/kernel-defaults.mk
 
