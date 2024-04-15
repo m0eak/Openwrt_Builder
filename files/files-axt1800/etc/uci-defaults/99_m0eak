@@ -13,16 +13,10 @@
 #uci add_list mosdns.config.remote_dns='tls://9.9.9.9'
 #uci add_list mosdns.config.remote_dns='tls://208.67.222.222'
 #uci commit mosdns
-#uci del system.ntp.enabled
-#uci del system.ntp.enable_server
-#uci set system.cfg01e48a.zonename='Asia/Shanghai'
-#uci set system.cfg01e48a.timezone='CST-8'
-#uci set system.cfg01e48a.log_proto='udp'
-#uci set system.cfg01e48a.conloglevel='8'
-#uci set system.cfg01e48a.cronloglevel='5'
-#uci commit system
 uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
+uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
+uci commit fancontrol
 echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
