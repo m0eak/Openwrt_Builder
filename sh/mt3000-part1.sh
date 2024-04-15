@@ -26,7 +26,7 @@ wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-m
 mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
 # 固定内核版本值
 echo "317eb6a6d9828371f8f0ca9cfaff251a" >> vermagic
-sed -i '/^grep \'\=[ym]\' \$(LINUX_DIR)\/\.config\.set \| LC_ALL=C sort \| \$(MKHASH) md5 > \$(LINUX_DIR)\/\.vermagic$/c\cp \$(TOPDIR)\/vermagic \$(LINUX_DIR)\/.vermagic' ./include/kernel-defaults.mk
+# sed -i '/^grep \'\=[ym]\' \$(LINUX_DIR)\/\.config\.set \| LC_ALL=C sort \| \$(MKHASH) md5 > \$(LINUX_DIR)\/\.vermagic$/c\cp \$(TOPDIR)\/vermagic \$(LINUX_DIR)\/.vermagic' ./include/kernel-defaults.mk
 # sed -i '121s|grep '\''=[ym]'\'' $(LINUX_DIR)/.config.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)/.vermagic|cp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic|' ./include/kernel-defaults.mk
 # sed -i '121s#grep '\''=[ym]'\'' $(LINUX_DIR)/.config.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)/.vermagic#cp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic#' ./include/kernel-defaults.mk
 
