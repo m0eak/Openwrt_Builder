@@ -10,8 +10,8 @@
 
 - 使用[JiaY-shi/openwrt](https://github.com/JiaY-shi/openwrt.git) [immortalwrt](https://github.com/immortalwrt/immortalwrt.git)源码
 - 支持GL-inet AXT-1800, GL-inet MT-3000机型(192.168.8.1)，x86(192.168.100.100)，默认无密码。
-- MT3000 内置Tailscale，风扇控制，WIFI计划，微信推送，固定内核魔法值，可直接安装immortalwrt软件源内的包
-- AXT1800 内置Tailscale，风扇控制，openclash，微信推送，mosdns，WIFI计划，kms激活，ttyd，quickstart
+- MT3000 内置Tailscale，风扇控制，WIFI计划，微信推送，释放内存，固定内核魔法值，可直接安装immortalwrt软件源内的包
+- AXT1800 内置Tailscale，风扇控制，openclash，微信推送，mosdns，WIFI计划，kms激活，ttyd，quickstart，释放内存
 ## Credits
 
 - [Microsoft Azure](https://azure.microsoft.com)
