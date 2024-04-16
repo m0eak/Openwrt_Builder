@@ -11,19 +11,17 @@ uci add_list mosdns.config.remote_dns='https://dns.google/dns-query'
 uci add_list mosdns.config.remote_dns='https://dns.cloudflare.com/dns-query'
 uci add_list mosdns.config.remote_dns='https://dns.quad9.net/dns-query'
 uci commit mosdns
-#uci del system.ntp.enabled
-#uci del system.ntp.enable_server
-#uci set system.cfg01e48a.zonename='Asia/Shanghai'
-#uci set system.cfg01e48a.timezone='CST-8'
-#uci set system.cfg01e48a.log_proto='udp'
-#uci set system.cfg01e48a.conloglevel='8'
-#uci set system.cfg01e48a.cronloglevel='5'
-#uci commit system
 uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
 uci set turboacc.config.bbr_cca='0'
 uci commit turbooacc
-echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
+# 检测文件中是否存在目标行
+if grep -q "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" /etc/crontabs/root; then
+    echo "Skip"
+else
+    echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
+fi
+#echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 sed -i "s/option rollback '90'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
