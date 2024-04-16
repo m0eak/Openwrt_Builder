@@ -18,5 +18,6 @@ find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-https://github.com/sbwml/autocore-arm.git package/autocore-arm
+wget https://minhaskamal.github.io/DownGit/#/home?url=https://github.com/immortalwrt/immortalwrt/tree/master/package/emortal/autocore
+unzip ./autocore.zip -d ./package/custom/
 ./scripts/feeds install -a
