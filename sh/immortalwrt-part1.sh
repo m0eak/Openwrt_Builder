@@ -26,3 +26,5 @@ echo 'src-git istore https://github.com/linkease/istore.git' >>feeds.conf.defaul
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
 # 固定内核版本值
 curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/x86/64/immortalwrt-23.05.2-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
+sed -i '121s|^|# |' ./include/kernel-defaults.mk
+sed -i $'121a\\\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic\\' ./include/kernel-defaults.mk
