@@ -17,7 +17,13 @@ uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
 uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
 uci commit fancontrol
-echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
+# 检测文件中是否存在目标行
+if grep -q "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" /etc/crontabs/root; then
+    echo "Skip"
+else
+    echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
+fi
+# echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
