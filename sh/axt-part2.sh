@@ -18,6 +18,6 @@ find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-# mkdir ./package/custom
-# git clone https://github.com/m0eak/autocore.git ./package/custom/
+mkdir ./package/custom
+git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 ./scripts/feeds install -a
