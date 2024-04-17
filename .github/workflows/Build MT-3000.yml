@@ -24,10 +24,8 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_1: https://github.com/immortalwrt/immortalwrt.git
-  REPO_URL_2: https://github.com/hanwckf/immortalwrt-mt798x.git
-  REPO_BRANCH_1: openwrt-23.05
-  REPO_BRANCH_2: openwrt-23.05
+  REPO_URL: https://github.com/immortalwrt/immortalwrt.git
+  REPO_BRANCH: openwrt-23.05
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/mt3000.config
   DIY_P1_SH: ./sh/mt3000-part1.sh
@@ -65,45 +63,16 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-          if [[ ${{ github.event.inputs.env_selection }} == '23.05.2' ]]; then
-            git clone -b $REPO_BRANCH_1 $REPO_URL_1 openwrt
-          elif [[ ${{ github.event.inputs.env_selection }} == '21.02' ]]; then
-            git clone $REPO_URL_2 openwrt
-          else
-            echo "No valid environment selected"
-            exit 1
-          fi
-        # git clone $REPO_URL -b $REPO_BRANCH openwrt
+        git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
     - name: Load custom feeds
       run: |
-        if [[ ${{ github.event.inputs.env_selection }} == '23.05.2' ]]; then
-           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        elif [[ ${{ github.event.inputs.env_selection }} == '21.02' ]]; then
-           [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        else
-          echo "No valid environment selected"
-          exit 1
-        fi
-        # [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
         git checkout $TAG
         $GITHUB_WORKSPACE/$DIY_P1_SH
-        if [[ ${{ github.event.inputs.env_selection }} == '23.05.2' ]]; then
-           curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
-           wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch 
-           mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
-           curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/mediatek/filogic/immortalwrt-23.05.2-mediatek-filogic.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
-           sed -i '121s|^|# |' ./include/kernel-defaults.mk
-           sed -i $'121a\\\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic\\' ./include/kernel-defaults.mk
-        elif [[ ${{ github.event.inputs.env_selection }} == '21.02' ]]; then
-           echo "跳过"
-        else
-          echo "No valid environment selected"
-          exit 1
-        fi
 
     - name: Update feeds
       run: cd openwrt && ./scripts/feeds update -a
@@ -113,17 +82,8 @@ jobs:
 
     - name: Load custom configuration
       run: |
-        if [[ ${{ github.event.inputs.env_selection }} == '23.05.2' ]]; then
-          [ -e files ] && mv ./files/files-mt3000 openwrt/files
-          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        elif [[ ${{ github.event.inputs.env_selection }} == '21.02' ]]; then
-          echo "跳过"
-        else
-          echo "No valid environment selected"
-          exit 1
-        fi
-        # [ -e files ] && mv ./files/files-mt3000 openwrt/files
-        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        [ -e files ] && mv ./files/files-mt3000 openwrt/files
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
@@ -204,16 +164,6 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
-        if [[ ${{ github.event.inputs.env_selection }} == '23.05.2' ]]; then
-          echo "::set-output name=release_tag::mt3000-$TAG-$(date +"%Y.%m.%d-%H%M")"
-          touch release.txt
-        elif [[ ${{ github.event.inputs.env_selection }} == '21.02' ]]; then
-          echo "::set-output name=release_tag::mt3000-v21.02-$(date +"%Y.%m.%d-%H%M")"
-          touch release.txt
-        else
-          echo "No valid environment selected"
-          exit 1
-        fi
         echo "::set-output name=release_tag::mt3000-$(date +"%Y.%m.%d-%H%M")"
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
