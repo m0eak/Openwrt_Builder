@@ -17,7 +17,7 @@ sed -i 's/'ImmortalWrt'/'GL-MT3000'/g' ./package/base-files/files/bin/config_gen
 find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 mkdir package/mtk
-git clone https://github.com/m0eak/luci-app-turboacc-mtk.git package/mtk
+git clone https://github.com/m0eak/luci-app-turboacc-mtk.git package/mtk/luci-app-turboacc-mtk
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-#./scripts/feeds install -a
+./scripts/feeds install -a
