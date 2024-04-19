@@ -1,0 +1,31 @@
+#!/bin/sh
+#uci set turboacc.config.sw_flow='0'
+#uci commit turboacc
+#uci set mosdns.config.enabled='1'
+#uci set mosdns.config.redirect='0'
+#uci set mosdns.config.custom_local_dns='1'
+#uci set mosdns.config.enable_http3_local='0'
+#uci add_list mosdns.config.local_dns='https://dns.alidns.com/dns-query'
+#uci add_list mosdns.config.local_dns='https://doh.pub/dns-query'
+#uci add_list mosdns.config.local_dns='https://doh.360.cn/dns-query'
+#uci add_list mosdns.config.remote_dns='tls://1.1.1.1'
+#uci add_list mosdns.config.remote_dns='tls://8.8.8.8'
+#uci add_list mosdns.config.remote_dns='tls://9.9.9.9'
+#uci add_list mosdns.config.remote_dns='tls://208.67.222.222'
+#uci commit mosdns
+#uci del system.ntp.enabled
+#uci del system.ntp.enable_server
+#uci set system.cfg01e48a.zonename='Asia/Shanghai'
+#uci set system.cfg01e48a.timezone='CST-8'
+#uci set system.cfg01e48a.log_proto='udp'
+#uci set system.cfg01e48a.conloglevel='8'
+#uci set system.cfg01e48a.cronloglevel='5'
+#uci commit system
+# uci set luci.main.mediaurlbase='/luci-static/bootstrap'
+#uci commit luci
+#echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
+#sed -i "s/option rollback '90'/option rollback '30'/" /etc/config/luci
+#sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
+#sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
+#sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
+exit 0
