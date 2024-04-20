@@ -1,8 +1,9 @@
 #!/bin/sh
-uci set mosdns.config.enabled='0'
+uci set mosdns.config.enabled='1'
 uci set mosdns.config.redirect='1'
 uci set mosdns.config.custom_local_dns='1'
 uci set mosdns.config.enable_http3_local='0'
+uci set mosdns.config.dns_leak='1'
 uci add_list mosdns.config.local_dns='https://dns.alidns.com/dns-query'
 uci add_list mosdns.config.local_dns='https://doh.pub/dns-query'
 uci add_list mosdns.config.local_dns='https://doh.360.cn/dns-query'
@@ -13,14 +14,8 @@ uci add_list mosdns.config.remote_dns='https://dns.quad9.net/dns-query'
 uci commit mosdns
 uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
-uci set turboacc.config.bbr_cca='0'
+uci set turboacc.config.bbr_cca='1'
 uci commit turbooacc
-# 检测文件中是否存在目标行
-if grep -q "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" /etc/crontabs/root; then
-    echo "Skip"
-else
-    echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
-fi
 #echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 sed -i "s/option rollback '90'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
