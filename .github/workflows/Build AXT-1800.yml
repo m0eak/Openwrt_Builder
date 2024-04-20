@@ -11,8 +11,6 @@
 name: Build AXT-1800
 
 on:
-  schedule:
-    - cron: 0 */18 * * *
   repository_dispatch:
   workflow_dispatch:
     inputs:
@@ -24,7 +22,6 @@ on:
         description: 'SSH connection to Actions'
         required: false
         default: 'false'
-
 
 env:
   REPO_URL: https://github.com/JiaY-shi/openwrt.git
