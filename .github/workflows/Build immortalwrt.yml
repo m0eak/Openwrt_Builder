@@ -79,9 +79,12 @@ jobs:
     - name: Load custom configuration
       run: |
         [ -e files ] && mv ./files/files-immortalwrt openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        wget https://downloads.immortalwrt.org/releases/23.05.2/targets/x86/64/config.buildinfo ./openwrt
+        # [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        [ -e $CONFIG_FILE ] && cat $CONFIG_FILE >> openwrt/config.buildinfo
         chmod +x $DIY_P2_SH
         cd openwrt
+        cp config.buildinfo .config
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
