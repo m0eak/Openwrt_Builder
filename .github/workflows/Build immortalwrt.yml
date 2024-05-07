@@ -82,7 +82,6 @@ jobs:
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
-        cp config.buildinfo .config
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
