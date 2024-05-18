@@ -12,6 +12,9 @@
 - 支持GL-inet AXT-1800, GL-inet MT-3000机型(192.168.8.1)，x86(192.168.100.1)，默认无密码。
 - MT3000 23.05.2 内置Tailscale，风扇控制，WIFI计划，微信推送，释放内存，固定内核魔法值，可直接安装immortalwrt软件源内的内核软件包
 - AXT1800 内置Tailscale，风扇控制，openclash，微信推送，mosdns，WIFI计划，kms激活，ttyd，quickstart，释放内存
+![image](https://github.com/m0eak/Openwrt_Builder/assets/50049180/e7276731-de20-48d7-8d3c-c5794f951fa0)
+
+
 ## Credits
 
 - [Microsoft Azure](https://azure.microsoft.com)
