@@ -14,6 +14,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      docker:
+        description: '是否编译docker(刷入后必须tf卡或u盘扩容)'
+        required: false
+        default: 'false'
       nss:
         description: '是否编译nss'
         required: false
@@ -29,6 +33,7 @@ env:
   REPO_BRANCH: ipq60xx-devel
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
+  CONFIG_FILE_DOCKER: ./config/axt1800-docker.config
   DIY_P1_SH: ./sh/axt-part1.sh
   DIY_P2_SH: ./sh/axt-part2.sh
   UPLOAD_BIN_DIR: true
@@ -89,7 +94,13 @@ jobs:
     - name: Load custom configuration
       run: |
         [ -e files ] && mv ./files/files-axt1800 openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+           if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
+            echo "Load custom docker configuration..."
+            [ -e $CONFIG_FILE_DOCKER ] && mv $CONFIG_FILE_DOCKER openwrt/.config
+          else
+            echo "Load custom configuration..."
+            [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+          fi
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
@@ -170,7 +181,13 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
-        echo "::set-output name=release_tag::axt1800-$(date +"%Y.%m.%d-%H%M")"
+        if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
+          echo "Generate release tag docker..."
+          echo "::set-output name=release_tag::axt1800-docker-$(date +"%Y.%m.%d-%H%M")"
+        else
+          echo "Generate release tag..."
+          echo "::set-output name=release_tag::axt1800-$(date +"%Y.%m.%d-%H%M")"
+        fi
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
