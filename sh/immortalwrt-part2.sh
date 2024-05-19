@@ -21,5 +21,5 @@ find ./ | grep Makefile | grep openclash | xargs rm -f
 
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-git clone --depth 1 https://github.com/vernesong/OpenClash.git ./package/
+git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 ./scripts/feeds install -a
