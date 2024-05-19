@@ -21,5 +21,13 @@ find ./ | grep Makefile | grep openclash | xargs rm -f
 
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-git clone https://github.com/vernesong/OpenClash.git package/openclash
+mkdir ./package/luci-app-openclash
+cd ./package/luci-app-openclash
+git init
+git remote add -f origin https://github.com/vernesong/OpenClash.git
+git config core.sparsecheckout true
+echo "luci-app-openclash" >> .git/info/sparse-checkout
+git pull --depth 1 origin master
+git branch --set-upstream-to=origin/master master
+cd ../..
 ./scripts/feeds install -a
