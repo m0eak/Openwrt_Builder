@@ -16,8 +16,17 @@ sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_gener
 sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
 find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
+find ./ | grep Makefile | grep app-store | xargs rm -f
+find ./ | grep Makefile | grep linkease | xargs rm -f
+find ./ | grep Makefile | grep linkmount | xargs rm -f
+find ./ | grep Makefile | grep quickstart | xargs rm -f
+find ./ | grep Makefile | grep unishare | xargs rm -f
+find ./ | grep Makefile | grep webdav2 | xargs rm -f
 git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
+git clone https://github.com/linkease/istore.git package/istore
+git clone https://github.com/linkease/nas-packages-luci.git package/istore
+git clone https://github.com/linkease/nas-packages.git package/istore
 mkdir ./package/custom
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 ./scripts/feeds install -a
