@@ -96,7 +96,7 @@ jobs:
         [ -e files ] && mv ./files/files-axt1800 openwrt/files
            if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
             echo "Load custom docker configuration..."
-            [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+            [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
             [ -e $CONFIG_FILE_DOCKER ] && cat $CONFIG_FILE_DOCKER >> openwrt/.config
           else
             echo "Load custom configuration..."
