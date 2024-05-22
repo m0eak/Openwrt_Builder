@@ -102,6 +102,12 @@ jobs:
             echo "Load custom configuration..."
             [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
           fi
+          if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
+            echo "Load custom nss configuration..."
+            cat nss.config >> openwrt/.config
+          else
+            echo "Skip..."
+          fi
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
