@@ -24,7 +24,7 @@ echo 'src-git small https://github.com/kenzok8/small-package' >>feeds.conf.defau
 # echo 'src-git linkease_nas_package https://github.com/linkease/nas-packages.git' >>feeds.conf.default
 # echo 'src-git istore https://github.com/linkease/istore.git' >>feeds.conf.default
 # echo 'src-git kenzok https://github.com/kenzok8/small-package.git' >>feeds.conf.default
-# curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
 # 固定内核版本值
 curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/x86/64/immortalwrt-23.05.2-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
 # wget https://downloads.immortalwrt.org/releases/23.05.2/targets/x86/64/immortalwrt-23.05.2-x86-64.manifest
