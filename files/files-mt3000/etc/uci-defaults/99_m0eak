@@ -28,4 +28,5 @@ sed -i "s/option rollback '90'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
+sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 exit 0
