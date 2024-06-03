@@ -27,6 +27,7 @@ git clone https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone https://github.com/linkease/istore.git package/istore
 git clone https://github.com/linkease/nas-packages-luci.git package/nas-packages-luci
 git clone https://github.com/linkease/nas-packages.git package/nas-packages
+git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 mkdir ./package/custom
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 ./scripts/feeds install -a
