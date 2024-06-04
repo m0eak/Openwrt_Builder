@@ -27,7 +27,7 @@ git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 cd ..
 git clone --depth 1 https://github.com/immortalwrt/packages.git
-cp ./packages/net/tailscale ./openwrt/package/tailscale
+cp -r ./packages/net/tailscale ./openwrt/package/tailscale
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/package/tailscale/Makefile
 rm -rf packages
 cd openwrt
