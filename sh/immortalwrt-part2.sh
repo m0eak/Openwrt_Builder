@@ -27,8 +27,8 @@ git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 cd ..
 git clone --depth 1 https://github.com/immortalwrt/packages.git
-cp -r ./packages/net/tailscale ./openwrt/feeds/packages/net/tailscale
-sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/package/tailscale/Makefile
+cp -r ./packages/net/tailscale ./openwrt/feeds/packages/net/
+sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/feeds/packages/net/tailscale/Makefile && echo "tailscale修复更新成功"
 rm -rf packages
 cd openwrt
 ./scripts/feeds install -a
