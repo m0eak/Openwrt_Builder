@@ -19,7 +19,7 @@ on:
       docker:
         description: '是否编译docker(刷入后必须tf卡或u盘扩容)'
         required: false
-        default: 'false'
+        default: 'true'
       nss:
         description: '是否编译nss'
         required: false
