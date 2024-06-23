@@ -31,8 +31,8 @@ on:
 
 env:
   REPO_URL: https://github.com/King-Of-Knights/openwrt-6.x.git
-  REPO_BRANCH_NSS: ipq60xx-devel_nss
-  REPO_BRANCH: ipq60xx-devel
+  REPO_BRANCH_NSS: main
+  REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/axt1800-docker.config
