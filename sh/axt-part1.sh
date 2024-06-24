@@ -28,5 +28,5 @@ sed -i '39s/0x3/0xf/;47s/0x3/0xf/;55s/0x1/0xf/;63s/0x1/0xf/' ./target/linux/qual
 curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
 VERSION_NUMBER=$(sed -n '/VERSION_NUMBER:=$(if $(VERSION_NUMBER),$(VERSION_NUMBER),.*)/p' include/version.mk|sed -e 's/.*$(VERSION_NUMBER),//' -e 's/)//')
 kernel_versions="$(find "./include"|sed -n '/kernel-[0-9]/p'|sed -e "s@./include/kernel-@@" |sed ':a;N;$!ba;s/\n/ /g')"
-rm -rf ./target/linux/generic/hack-$kernel_version/953-net-patch-linux-kernel-to-support-shortcut-fe.patch && echo "删除"
-rm -rf ./target/linux/generic/pending-$kernel_version/613-netfilter_optional_tcp_window_check.patch && echo "删除"
+# rm -rf ./target/linux/generic/hack-$kernel_version/953-net-patch-linux-kernel-to-support-shortcut-fe.patch && echo "删除"
+# rm -rf ./target/linux/generic/pending-$kernel_version/613-netfilter_optional_tcp_window_check.patch && echo "删除"
