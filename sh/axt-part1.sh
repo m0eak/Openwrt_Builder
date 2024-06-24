@@ -25,11 +25,5 @@ echo 'src-git smoothwan https://github.com/SmoothWAN/SmoothWAN-feeds' >>feeds.co
 # fix cpu_opp_table
 sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/;70s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
 sed -i '39s/0x3/0xf/;47s/0x3/0xf/;55s/0x1/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0910-arm64-dts-qcom-ipq6018-change-voltage-to-perf-levels.patch
+curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
 
-# 缝合immortalwrt luci
-# echo "缝合immortalwrt-luci......"
-# TARGET_LUCI="https://git.openwrt.org/project/luci.git"
-# TARGET_PACKAGE="https://git.openwrt.org/feed/packages.git"
-# NEW_LUCI="src-git luci https://git.openwrt.org/project/luci.git;openwrt-23.05"
-# NEW_PACKAGE="src-git packages https://git.openwrt.org/feed/packages.git;openwrt-23.05"
-# sed -i "s|.*$TARGET_LUCI.*|$NEW_LUCI|" "feeds.conf.default" && sed -i "s|.*$TARGET_PACKAGE.*|$NEW_PACKAGE|" "feeds.conf.default" && echo "替换完成"
