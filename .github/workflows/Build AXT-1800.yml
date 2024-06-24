@@ -23,7 +23,7 @@ on:
       nss:
         description: '是否编译nss'
         required: false
-        default: 'false'
+        default: 'true'
       ssh:
         description: 'SSH connection to Actions'
         required: false
