@@ -25,7 +25,7 @@ on:
         required: false
         default: 'true'
       ssh:
-        description: 'SSH connection to Actions'
+        description: 'SSH 连接到 Actions'
         required: false
         default: 'false'
 
@@ -42,7 +42,7 @@ env:
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
-  UPLOAD_WETRANSFER: true
+  UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
 
@@ -54,7 +54,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@main
 
-    - name: Initialization environment
+    - name: 初始化环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -67,63 +67,62 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-    - name: Clone source code
+    - name: 克隆源代码
       working-directory: /workdir
       run: |
         df -hT $PWD
-          if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
-            echo "Cloning ipq60xx-devel-nss branch..."
-            git clone --branch $REPO_BRANCH_NSS $REPO_URL openwrt
-          else
-            echo "Cloning ipq60xx-devel branch..."
-            git clone --branch $REPO_BRANCH $REPO_URL openwrt
-          fi
-        # git clone $REPO_URL -b $REPO_BRANCH openwrt
+        if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
+          echo "正在克隆 ipq60xx-devel-nss 分支..."
+          git clone --branch $REPO_BRANCH_NSS $REPO_URL openwrt
+        else
+          echo "正在克隆 ipq60xx-devel 分支..."
+          git clone --branch $REPO_BRANCH $REPO_URL openwrt
+        fi
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-    - name: Load custom feeds
+    - name: 加载自定义源
       run: |
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: Update feeds
+    - name: 更新源
       run: cd openwrt && ./scripts/feeds update -a
 
-    - name: Install feeds
+    - name: 安装源
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Load custom configuration
+    - name: 加载自定义配置
       run: |
         [ -e files ] && mv ./files/files-axt1800 openwrt/files
-           if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
-            echo "Load custom docker configuration..."
-            [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
-            [ -e $CONFIG_FILE_DOCKER ] && cat $CONFIG_FILE_DOCKER >> openwrt/.config
-          else
-            echo "Load custom configuration..."
-            [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-          fi
-          if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
-            echo "Load custom nss configuration..."
-            cat $CONFIG_FILE_NSS >> openwrt/.config
-          else
-            echo "Skip..."
-          fi
+        if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
+          echo "加载自定义 docker 配置..."
+          [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
+          [ -e $CONFIG_FILE_DOCKER ] && cat $CONFIG_FILE_DOCKER >> openwrt/.config
+        else
+          echo "加载自定义配置..."
+          [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        fi
+        if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
+          echo "加载自定义 nss 配置..."
+          cat $CONFIG_FILE_NSS >> openwrt/.config
+        else
+          echo "跳过..."
+        fi
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
-    - name: SSH connection to Actions
+    - name: SSH 连接到 Actions
       uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: Download package
+    - name: 下载软件包
       id: package
       run: |
         cd openwrt
@@ -131,99 +130,110 @@ jobs:
         find dl -size -1024c -exec ls -l {} \;
         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Compile the firmware
+    - name: 编译固件
       id: compile
       run: |
         cd openwrt
-        echo -e "$(nproc) thread compile"
+        echo -e "$(nproc) 线程编译"
         echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
-        echo "::set-output name=status::success"
+        echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        cat $GITHUB_ENV
+        echo "compile=success" >> $GITHUB_OUTPUT
+        if [ -s DEVICE_NAME ]; then
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+        fi
+        echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-    - name: Check space usage
+    - name: 检查空间使用情况
       if: (!cancelled())
       run: df -hT
 
-    - name: Upload bin directory
+    - name: 上传 bin 目录
       uses: actions/upload-artifact@main
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        name: OpenWrt_bin_${{ steps.compile.outputs.device-name }}_${{ steps.compile.outputs.file-date }}
         path: openwrt/bin
 
-    - name: Organize files
+
+    - name: 整理文件
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "::set-output name=status::success"
+        echo "status=success" >> $GITHUB_ENV
+        echo "organize=success" >> $GITHUB_OUTPUT
 
-    - name: Upload firmware directory
+    - name: 上传固件目录
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
+      if: steps.organize.outputs.organize == 'success' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
 
-    - name: Upload firmware to cowtransfer
+    - name: 上传固件到 cowtransfer
       id: cowtransfer
       if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
       run: |
         curl -fsSL git.io/file-transfer | sh
         ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
         echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
+        echo "url=$(cat cowtransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
 
-    - name: Upload firmware to WeTransfer
+    - name: 上传固件到 WeTransfer
       id: wetransfer
-      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
       run: |
         curl -fsSL git.io/file-transfer | sh
         ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
         echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
+        echo "url=$(cat wetransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
 
-    - name: Generate release tag
+    - name: 生成发布标签
       id: tag
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       run: |
         if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
-          echo "Generate release tag docker..."
-          echo "::set-output name=release_tag::axt1800-docker-$(date +"%Y.%m.%d-%H%M")"
+          echo "生成 docker 发布标签..."
+          echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         else
-          echo "Generate release tag..."
-          echo "::set-output name=release_tag::axt1800-$(date +"%Y.%m.%d-%H%M")"
+          echo "生成发布标签..."
+          echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         fi
         touch release.txt
-        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
-        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
-        echo "::set-output name=status::success"
+        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ env.cowtransfer_url }})" >> release.txt
+        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ env.wetransfer_url }})" >> release.txt
+        echo "tag=success" >> $GITHUB_ENV
+        echo "tag=success" >> $GITHUB_OUTPUT
 
-    - name: Upload firmware to release
+    - name: 上传固件到发布
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && !cancelled()
+      if: steps.tag.outputs.release_tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
+        tag_name: ${{ env.release_tag }}
         body_path: release.txt
         files: ${{ env.FIRMWARE }}/*
 
-    - name: Delete workflow runs
+    - name: 删除工作流运行
       uses: GitRML/delete-workflow-runs@main
       with:
         retain_days: 1
         keep_minimum_runs: 3
 
-    - name: Remove old Releases
+    - name: 删除旧版本
       uses: dev-drprasad/delete-older-releases@v0.1.0
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.tag.outputs.release_tag && env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
-        keep_latest: 6
+        keep_latest: 10
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
