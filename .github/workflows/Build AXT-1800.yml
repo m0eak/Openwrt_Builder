@@ -42,7 +42,7 @@ env:
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
-  UPLOAD_WETRANSFER: true
+  UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
 
@@ -136,10 +136,11 @@ jobs:
         cd openwrt
         echo -e "$(nproc) 线程编译"
         echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
-        echo "compile.status=success" >> $GITHUB_ENV
+        echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        cat $GITHUB_ENV
 
     - name: 检查空间使用情况
       if: (!cancelled())
@@ -147,7 +148,7 @@ jobs:
 
     - name: 上传 bin 目录
       uses: actions/upload-artifact@main
-      if: env.compile.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      if: env.compile-status == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
         name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: openwrt/bin
