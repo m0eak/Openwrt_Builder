@@ -30,7 +30,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/King-Of-Knights/openwrt-6.x.git
+  REPO_URL: https://github.com/m0eak/openwrt-6.x.git
   REPO_BRANCH_NSS: main
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
@@ -85,6 +85,7 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
+        git checkout 20240624
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: 更新源
