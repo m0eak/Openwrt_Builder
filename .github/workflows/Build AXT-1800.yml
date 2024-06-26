@@ -31,8 +31,8 @@ on:
 
 env:
   REPO_URL: https://github.com/m0eak/openwrt-6.x.git
-  REPO_BRANCH_NSS: main
-  REPO_BRANCH: main
+  REPO_BRANCH_NSS: test
+  REPO_BRANCH: test
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/axt1800-docker.config
@@ -85,7 +85,6 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
-        git checkout 20240624
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: 更新源
