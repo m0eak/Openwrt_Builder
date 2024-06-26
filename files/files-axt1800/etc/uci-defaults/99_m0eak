@@ -1,4 +1,9 @@
 #!/bin/sh
+until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
+  sleep 1
+done
+chmod +x /usr/share/extpart.sh
+ln -s /usr/share/extpart.sh /bin/extpart
 sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.enabled='1'
@@ -255,9 +260,6 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '
   /etc/init.d/fancontrol restart
 fi
 
-until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
-  sleep 1
-done
 if [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 fi
@@ -277,6 +279,5 @@ if [ "$(opkg list-installed 2>/dev/null | grep -c "^luci-app-ttyd")" -ne '0' ] &
 fi
 if [ "$need_restart" -eq '1' ]; then
   /etc/init.d/rpcd restart
-
 fi
 exit 0
