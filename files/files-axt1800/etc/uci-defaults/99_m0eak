@@ -247,9 +247,6 @@ sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
-uci del firewall.cfg01e63d.flow_offloading
-uci del firewall.cfg01e63d.flow_offloading_hw
-uci commit firewall
 uci commit
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
