@@ -32,5 +32,5 @@ git clone --depth=1 https://github.com/asvow/luci-app-tailscale package/luci-app
 git clone --depth=1 https://github.com/chenmozhijin/turboacc.git package/turboacc
 mkdir ./package/custom
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
-# sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
+sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
 ./scripts/feeds install -a
