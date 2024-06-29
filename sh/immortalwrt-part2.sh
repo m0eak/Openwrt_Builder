@@ -19,18 +19,15 @@ find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
 find ./ | grep Makefile | grep mosdns | xargs rm -f
 find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
-find ./ | grep Makefile | grep homeproxy | xargs rm -f
+# find ./ | grep Makefile | grep homeproxy | xargs rm -f
 # find ./ | grep Makefile | grep tailscale | xargs rm -f
 
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
-git clone --depth 1 https://github.com/bulianglin/homeproxy.git package/luci-app-homeproxy
+# git clone --depth 1 https://github.com/bulianglin/homeproxy.git package/luci-app-homeproxy
 # Update Tailscale
 git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
-cd ..
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/feeds/packages/net/tailscale/Makefile && echo "tailscale修复更新成功"
-rm -rf packages
-cd openwrt
 ./scripts/feeds install -a
