@@ -28,6 +28,6 @@ git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
 # git clone --depth 1 https://github.com/bulianglin/homeproxy.git package/luci-app-homeproxy
 # Update Tailscale
-git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
-sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/feeds/packages/net/tailscale/Makefile && echo "tailscale修复更新成功"
+# git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
+# sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/feeds/packages/net/tailscale/Makefile && echo "tailscale修复更新成功"
 ./scripts/feeds install -a
