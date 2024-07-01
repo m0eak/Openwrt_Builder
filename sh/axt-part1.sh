@@ -17,10 +17,10 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 rm -rf feeds.conf.default
 touch feeds.conf.default
-echo 'src-git packages https://git.openwrt.org/feed/packages.git^063b2393cbc3e5aab9d2b40b2911cab1c3967c59' >>feeds.conf.default
-echo 'src-git luci https://git.openwrt.org/project/luci.git^b07cf9dcfc37e021e5619a41c847e63afbd5d34a' >>feeds.conf.default
-echo 'src-git routing https://git.openwrt.org/feed/routing.git^648753932d5a7deff7f2bdb33c000018a709ad84' >>feeds.conf.default
-echo 'src-git telephony https://git.openwrt.org/feed/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
+echo 'src-git packages https://git.openwrt.org/feed/packages.git' >>feeds.conf.default
+echo 'src-git luci https://git.openwrt.org/project/luci.git' >>feeds.conf.default
+echo 'src-git routing https://git.openwrt.org/feed/routing.git' >>feeds.conf.default
+echo 'src-git telephony https://git.openwrt.org/feed/telephony.git' >>feeds.conf.default
 echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x-NAPI' >>feeds.conf.default
 echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >>feeds.conf.default
 # echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
