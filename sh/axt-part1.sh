@@ -17,10 +17,10 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 rm -rf feeds.conf.default
 touch feeds.conf.default
-echo 'src-git packages https://github.com/immortalwrt/packages.git^fc5c6d19bc1e63affa36dc2d9107873469f96311' >>feeds.conf.default
-echo 'src-git luci https://github.com/immortalwrt/luci.git^7ce5799365f2ba329825a169b507718359303191' >>feeds.conf.default
-echo 'src-git routing https://github.com/openwrt/routing.git^0617824a44f037f68dfa80be25693bf5bc6f4ce5' >>feeds.conf.default
-echo 'src-git telephony https://github.com/openwrt/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
+echo 'src-git packages https://git.openwrt.org/feed/packages.git^063b2393cbc3e5aab9d2b40b2911cab1c3967c59' >>feeds.conf.default
+echo 'src-git packages https://git.openwrt.org/feed/packages.git^063b2393cbc3e5aab9d2b40b2911cab1c3967c59' >>feeds.conf.default
+echo 'src-git routing https://git.openwrt.org/feed/routing.git^648753932d5a7deff7f2bdb33c000018a709ad84' >>feeds.conf.default
+echo 'src-git telephony https://git.openwrt.org/feed/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
 echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x-NAPI' >>feeds.conf.default
 echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >>feeds.conf.default
 # echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
