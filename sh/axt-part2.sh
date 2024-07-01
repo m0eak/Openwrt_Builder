@@ -34,8 +34,4 @@ mkdir ./package/custom
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
 # ./scripts/feeds install -a
-wget https://raw.githubusercontent.com/openwrt-ipq60xx/patches/main/feeds/luci/0001-show-soc-status-on-luci.patch -P ./feeds/luci
-cd ./feeds/luci
-git config --global user.name "OpenWrt Builder"
-git config --global user.email "openwrt@openwr.com"
-git am 0001-show-soc-status-on-luci.patch
+
