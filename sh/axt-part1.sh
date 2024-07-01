@@ -21,7 +21,7 @@ echo 'src-git packages https://github.com/immortalwrt/packages.git^fc5c6d19bc1e6
 echo 'src-git luci https://github.com/immortalwrt/luci.git^7ce5799365f2ba329825a169b507718359303191' >>feeds.conf.default
 echo 'src-git routing https://github.com/openwrt/routing.git^0617824a44f037f68dfa80be25693bf5bc6f4ce5' >>feeds.conf.default
 echo 'src-git telephony https://github.com/openwrt/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
-echo 'src-git telephony https://github.com/openwrt/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
+echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x-NAPI' >>feeds.conf.default
 echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >>feeds.conf.default
 # echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
 git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/bin/config_generate && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/etc/banner && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh && echo "Done"
