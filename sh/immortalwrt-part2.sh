@@ -21,6 +21,7 @@ find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
 # find ./ | grep Makefile | grep homeproxy | xargs rm -f
 # find ./ | grep Makefile | grep tailscale | xargs rm -f
+find ./ | grep Makefile | grep turboacc | xargs rm -f
 
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
@@ -30,4 +31,4 @@ git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddn
 # Update Tailscale
 # git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 # sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' openwrt/feeds/packages/net/tailscale/Makefile && echo "tailscale修复更新成功"
-./scripts/feeds install -a
+git clone --depth=1 https://github.com/chenmozhijin/turboacc.git package/turboacc
