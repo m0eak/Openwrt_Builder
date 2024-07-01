@@ -35,7 +35,7 @@ env:
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
-  CONFIG_FILE_DOCKER: ./config/axt1800-docker.config
+  CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_NSS: ./config/nss.config
   DIY_P1_SH: ./sh/axt-part1.sh
   DIY_P2_SH: ./sh/axt-part2.sh
