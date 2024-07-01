@@ -15,12 +15,8 @@
 
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
-rm -rf feeds.conf.default
-touch feeds.conf.default
-echo 'src-git packages https://github.com/immortalwrt/packages.git' >>feeds.conf.default
-echo 'src-git luci https://github.com/immortalwrt/luci.git' >>feeds.conf.default
-echo 'src-git routing https://github.com/openwrt/routing.git^0617824a44f037f68dfa80be25693bf5bc6f4ce5' >>feeds.conf.default
-echo 'src-git telephony https://github.com/openwrt/telephony.git^86af194d03592121f5321474ec9918dd109d3057' >>feeds.conf.default
+# rm -rf feeds.conf.default
+# touch feeds.conf.default
 echo 'src-git small https://github.com/kenzok8/small-package' >>feeds.conf.default
 # echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages.git' >>feeds.conf.default
 # echo 'src-git linkease_nas https://github.com/linkease/nas-packages-luci' >>feeds.conf.default
