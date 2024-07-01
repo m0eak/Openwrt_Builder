@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# 列出现有分区
+echo "现有的分区如下："
+df -h | grep "/dev/mm" | grep "/dev/s"
+
 # 提示用户选择分区，并设置默认值
 echo "请选择要使用的分区（例如/dev/mmcblk0p1，默认值为 /dev/mmcblk0p1）："
 read partition
