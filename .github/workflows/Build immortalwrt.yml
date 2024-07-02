@@ -112,7 +112,7 @@ jobs:
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_OUTPUT
+        echo "compile=success" >> $GITHUB_OUTPUT
         if [ -s DEVICE_NAME ]; then
           echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
         fi
@@ -165,17 +165,18 @@ jobs:
 
     - name: Generate release tag
       id: tag
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.compile == 'success' && !cancelled()
       run: |
         echo "::set-output name=release_tag::immortalwrt-$(date +"%Y.%m.%d-%H%M")"
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
-        echo "status=success" >> $GITHUB_OUTPUT
+        echo "tag=success" >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
 
     - name: Upload firmware to release
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && !cancelled()
+      if: steps.tag.outputs.tag == 'success' && !cancelled()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
