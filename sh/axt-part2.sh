@@ -31,7 +31,10 @@ git clone --depth=1 https://github.com/linkease/nas-packages.git package/nas-pac
 git clone --depth=1 https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 git clone --depth=1 https://github.com/chenmozhijin/turboacc.git package/turboacc
 mkdir ./package/custom
+git clone --depth=1 -b NSS-12.5-K6.x-NAPI https://github.com/qosmio/nss-packages.git package/nss-packages
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
+cd ./package/nss-package
+git checkout 7eb6a1e14deb6af0a41cce8d4fead519db583560
 # ./scripts/feeds install -a
 
