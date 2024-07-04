@@ -34,7 +34,7 @@ mkdir ./package/custom
 git clone --depth=1 -b NSS-12.5-K6.x-NAPI https://github.com/qosmio/nss-packages.git package/nss-packages
 git clone https://github.com/sbwml/autocore-arm.git ./package/custom/
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
-cd ./package/nss-package
+cd ./package/nss-packages
 git checkout 7eb6a1e14deb6af0a41cce8d4fead519db583560
 # ./scripts/feeds install -a
 
