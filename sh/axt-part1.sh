@@ -21,7 +21,7 @@ echo 'src-git packages https://git.openwrt.org/feed/packages.git' >>feeds.conf.d
 echo 'src-git luci https://git.openwrt.org/project/luci.git' >>feeds.conf.default
 echo 'src-git routing https://git.openwrt.org/feed/routing.git' >>feeds.conf.default
 echo 'src-git telephony https://git.openwrt.org/feed/telephony.git' >>feeds.conf.default
-# echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x-NAPI^7eb6a1e14deb6af0a41cce8d4fead519db583560' >>feeds.conf.default
+echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git^7eb6a1e14deb6af0a41cce8d4fead519db583560' >>feeds.conf.default
 # echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >>feeds.conf.default
 # echo 'src-git mosdns https://github.com/sbwml/luci-app-mosdns' >>feeds.conf.default
 git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/bin/config_generate && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/etc/banner && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh && echo "Done"
