@@ -30,7 +30,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/King-Of-Knights/openwrt-6.x.git
+  REPO_URL: https://github.com/m0eak/openwrt-6.x.git
   REPO_BRANCH_NSS: main
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
