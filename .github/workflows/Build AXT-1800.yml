@@ -205,7 +205,7 @@ jobs:
 
     - name: 上传固件到发布
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.release_tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.tag.outputs.tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
