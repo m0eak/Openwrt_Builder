@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       docker:
-        description: '是否编译docker(刷入后必须tf卡或u盘扩容)'
+        description: '是否编译docker'
         required: false
         default: 'false'
       ssh:
