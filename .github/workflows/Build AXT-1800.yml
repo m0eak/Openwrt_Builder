@@ -20,10 +20,6 @@ on:
         description: '是否编译docker(刷入后必须tf卡或u盘扩容)'
         required: false
         default: 'false'
-      nss:
-        description: '是否编译nss'
-        required: false
-        default: 'true'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
@@ -31,12 +27,10 @@ on:
 
 env:
   REPO_URL: https://github.com/m0eak/openwrt-6.x.git
-  REPO_BRANCH_NSS: main
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
-  CONFIG_FILE_NSS: ./config/nss.config
   DIY_P1_SH: ./sh/axt-part1.sh
   DIY_P2_SH: ./sh/axt-part2.sh
   UPLOAD_BIN_DIR: true
@@ -71,13 +65,8 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-        if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
-          echo "正在克隆 ipq60xx-devel-nss 分支..."
-          git clone --branch $REPO_BRANCH_NSS $REPO_URL openwrt
-        else
-          echo "正在克隆 ipq60xx-devel 分支..."
-          git clone --branch $REPO_BRANCH $REPO_URL openwrt
-        fi
+        echo "正在克隆..."
+        git clone --depth 1 --branch $REPO_BRANCH $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt 
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
@@ -113,12 +102,6 @@ jobs:
         else
           echo "加载自定义配置..."
           [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
-        fi
-        if [[ ${{ github.event.inputs.nss }} == 'true' ]]; then
-          echo "加载自定义 nss 配置..."
-          cat $CONFIG_FILE_NSS >> openwrt/.config
-        else
-          echo "跳过..."
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
@@ -210,11 +193,9 @@ jobs:
       run: |
         if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
           echo "生成 docker 发布标签..."
-          echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         else
           echo "生成发布标签..."
-          echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
         fi
         touch release.txt
@@ -236,8 +217,8 @@ jobs:
     - name: 删除工作流运行
       uses: GitRML/delete-workflow-runs@main
       with:
-        retain_days: 1
-        keep_minimum_runs: 3
+        retain_days: 5
+        keep_minimum_runs: 10
 
     - name: 删除旧版本
       uses: dev-drprasad/delete-older-releases@v0.1.0
