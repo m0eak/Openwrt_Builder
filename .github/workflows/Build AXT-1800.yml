@@ -193,15 +193,14 @@ jobs:
       run: |
         if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
           echo "生成 docker 发布标签..."
-          echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
+          echo "release_tag=axt1800-docker-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
         else
           echo "生成发布标签..."
-          echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
+          echo "release_tag=axt1800-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
         fi
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ env.cowtransfer_url }})" >> release.txt
         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ env.wetransfer_url }})" >> release.txt
-        echo "tag=success" >> $GITHUB_ENV
         echo "tag=success" >> $GITHUB_OUTPUT
 
     - name: 上传固件到发布
