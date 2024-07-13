@@ -262,8 +262,35 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '
   uci set fancontrol.settings.start_temp='65'
   uci commit fancontrol
   /etc/init.d/fancontrol restart
+  echo "0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
+  echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
-
+if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
+  echo "# add your custom package feeds here" > /etc/opkg/customfeeds.conf
+  echo "#" > /etc/opkg/customfeeds.conf
+  echo "# src/gz example_feed_name http://www.example.com/path/to/files" > /etc/opkg/customfeeds.conf
+  echo "src/gz m0eak_packages https://package.m0eak.cc/packages/aarch64_cortex-a53/packages" >> /etc/opkg/customfeeds.conf
+  echo "src/gz m0eak_kernel https://package.m0eak.cc/packages/aarch64_cortex-a53/kernel-6.6.36-87661a4698cde24e8b5688aaa2bc61b5" >> /etc/opkg/customfeeds.conf
+  echo "src/gz is_nas https://istore.linkease.com/repo/aarch64_cortex-a53/nas" >> /etc/opkg/customfeeds.conf
+  echo "src/gz is_nas_luci https://istore.linkease.com/repo/all/nas_luci" >> /etc/opkg/customfeeds.conf
+  cat <<EOL > /etc/opkg/distfeeds.conf
+src/gz openwrt_base https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/base/
+src/gz openwrt_luci https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/luci/
+src/gz openwrt_packages https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/packages
+src/gz openwrt_routing https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/routing
+src/gz openwrt_telephony https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/telephony
+EOL
+fi
+if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "ImmortalWrt" /etc/openwrt_release)" -ne '0' ]  && [ "$(grep -c "23.05.2" /etc/openwrt_release)" -ne '0' ];then
+  cat <<EOL > /etc/opkg/distfeeds.conf
+src/gz immortalwrt_core https://mirrors.vsean.net/openwrt/releases/23.05.2/targets/x86/64/packages
+src/gz immortalwrt_base https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/base
+src/gz immortalwrt_luci https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/luci
+src/gz immortalwrt_packages https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/packages
+src/gz immortalwrt_routing https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/routing
+src/gz immortalwrt_telephony https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/telephony
+EOL
+fi
 if [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
 fi
