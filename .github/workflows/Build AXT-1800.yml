@@ -94,7 +94,7 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        [ -e files ] && mv ./files/files-axt1800 openwrt/files
+        [ -e files ] && mv ./files openwrt/files
         if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
           echo "加载自定义 docker 配置..."
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
