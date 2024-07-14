@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: '选择分支（还没写好不要改）'
+        description: '选择分支'
         required: true
         default: '23.05.2'
       ssh:
@@ -38,7 +38,7 @@ env:
   UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: v23.05.2
+  TAG: ${{ github.event.inputs.branch }}
 
 jobs:
   build:
