@@ -66,13 +66,13 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-      - name: Set WORKFLOW_NAME environment variable
-        run: |
-          echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_ENV
+    - name: Set WORKFLOW_NAME environment variable
+      run: |
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_ENV
       
-      - name: Print WORKFLOW_NAME
-        run: |
-          echo "WORKFLOW_NAME is $WORKFLOW_NAME"
+    - name: Print WORKFLOW_NAME
+      run: |
+        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
 
     - name: 克隆源代码
       working-directory: /workdir
