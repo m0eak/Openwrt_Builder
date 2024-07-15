@@ -16,6 +16,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      istore:
+        description: 'istore'
+        required: false
+        default: 'true'
       docker:
         description: '是否编译docker'
         required: false
@@ -31,6 +35,7 @@ env:
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
+  CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/axt-part1.sh
   DIY_P2_SH: ./sh/axt-part2.sh
   UPLOAD_BIN_DIR: true
@@ -105,6 +110,10 @@ jobs:
         else
           echo "加载自定义配置..."
           [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        fi
+        if [[ ${{ github.event.inputs.istore }} == 'true' ]]; then
+          echo "加载自定义 istore 配置..."
+          [ -e $CONFIG_FILE_ISTORE ] && cat $CONFIG_FILE_ISTORE >> openwrt/.config
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
