@@ -16,8 +16,9 @@
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 
+cat $GITHUB_ENV
 
-if [ "$(grep -c "AXT-1800" $GITHUB_ENV)" -eq '1' ];then
+if echo "$GITHUB_ENV" | grep -q "AXT-1800" ;then
   rm -rf feeds.conf.default
   touch feeds.conf.default
   echo 'src-git packages https://git.openwrt.org/feed/packages.git' >> feeds.conf.default
