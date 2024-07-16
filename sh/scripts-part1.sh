@@ -18,7 +18,7 @@
 
 cat $GITHUB_OUTPUT
 
-if [ echo "$GITHUB_OUTPUT" | grep -q "AXT-1800" ] ;then
+if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   rm -rf feeds.conf.default
   touch feeds.conf.default
   echo 'src-git packages https://git.openwrt.org/feed/packages.git' >> feeds.conf.default
@@ -38,13 +38,13 @@ if [ echo "$GITHUB_OUTPUT" | grep -q "AXT-1800" ] ;then
   # sed -i '39s/0x3/0xf/;47s/0x3/0xf/;55s/0x1/0xf/;63s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0910-arm64-dts-qcom-ipq6018-change-voltage-to-perf-levels.patch
   # sed -i 's/16384/65536/g' ./package/kernel/linux/files/sysctl-nf-conntrack.conf
 fi
-if [ "$(grep -c "immortalwrt" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
   echo 'src-git small https://github.com/kenzok8/small-package' >> feeds.conf.default
   curl -s https://downloads.immortalwrt.org/releases/23.05.2/targets/x86/64/immortalwrt-23.05.2-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
   sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
   sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
 fi
-if [ "$(grep -c "MT-3000" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> feeds.conf.default
   # 修补的firewall4、libnftnl、nftables与952补丁
   curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
