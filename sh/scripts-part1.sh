@@ -17,7 +17,7 @@
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 
 
-if [ "$(grep -c "AXT1800" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "AXT-1800" $GITHUB_ENV)" -eq '1' ];then
   rm -rf feeds.conf.default
   touch feeds.conf.default
   echo 'src-git packages https://git.openwrt.org/feed/packages.git' >> feeds.conf.default
@@ -43,7 +43,7 @@ if [ "$(grep -c "immortalwrt" $GITHUB_ENV)" -eq '1' ];then
   sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
   sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
 fi
-if [ "$(grep -c "MT3000" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "MT-3000" $GITHUB_ENV)" -eq '1' ];then
   echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> feeds.conf.default
   # 修补的firewall4、libnftnl、nftables与952补丁
   curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
