@@ -254,7 +254,6 @@ sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
-uci commit
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
   uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
@@ -265,15 +264,16 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '
   echo "0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
   echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
+uci commit
 if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
   echo "# add your custom package feeds here" > /etc/opkg/customfeeds.conf
-  echo "#" > /etc/opkg/customfeeds.conf
-  echo "# src/gz example_feed_name http://www.example.com/path/to/files" > /etc/opkg/customfeeds.conf
+  echo "#" >> /etc/opkg/customfeeds.conf
+  echo "# src/gz example_feed_name http://www.example.com/path/to/files" >> /etc/opkg/customfeeds.conf
   echo "src/gz m0eak_packages https://package.m0eak.cc/packages/aarch64_cortex-a53/packages" >> /etc/opkg/customfeeds.conf
-  echo "src/gz m0eak_kernel https://package.m0eak.cc/packages/aarch64_cortex-a53/kernel-6.6.36-87661a4698cde24e8b5688aaa2bc61b5" >> /etc/opkg/customfeeds.conf
   echo "src/gz is_nas https://istore.linkease.com/repo/aarch64_cortex-a53/nas" >> /etc/opkg/customfeeds.conf
   echo "src/gz is_nas_luci https://istore.linkease.com/repo/all/nas_luci" >> /etc/opkg/customfeeds.conf
   if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
+    echo "src/gz openwrt_core https://mirror.nju.edu.cn/immortalwrt/snapshots/targets/qualcommax/ipq807x/kmods/6.6.36-1-26768f9df0f6231779971745d5152147" >> /etc/opkg/customfeeds.conf
     echo "src/gz openwrt_base https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/base/" > /etc/opkg/distfeeds.conf
     echo "src/gz openwrt_luci https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/luci/" >> /etc/opkg/distfeeds.conf
     echo "src/gz openwrt_packages https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/packages" >> /etc/opkg/distfeeds.conf
@@ -302,21 +302,26 @@ uci set wireless.radio2.country='AU'
 uci commit wireless
 exit 0
 EOL
+  if [ "$(grep -c "net.ipv4.tcp_congestion_control=cubic" /etc/sysctl.conf)" -eq '0' ];then
+    echo "net.ipv4.tcp_congestion_control=cubic" >> /etc/sysctl.conf
+    /etc/init.d/network restart
+  fi
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
-  echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >>/etc/crontabs/root
+fi
+if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
+  echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
 fi
 if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" >>/etc/crontabs/root
+  echo "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" >>/etc/crontabs/root
+  echo "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
-if [ "$(opkg list-installed 2>/dev/null | grep -c "^luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
+if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
   sed -i 's/services/vpn/g' /usr/share/luci/menu.d/luci-app-tailscale.json && rm -rf luci-indexcache.*.json
   need_restart=1
 fi
-if [ "$(opkg list-installed 2>/dev/null | grep -c "^luci-app-ttyd")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-ttyd.json | grep -c "services")" -ne '0' ]; then
+if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-ttyd")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-ttyd.json | grep -c "services")" -ne '0' ]; then
   sed -i 's/services/system/g' /usr/share/luci/menu.d/luci-app-ttyd.json && rm -rf luci-indexcache.*.json
   need_restart=1
 fi
