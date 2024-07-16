@@ -15,21 +15,20 @@
 
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
-rm -rf feeds.conf.default
-touch feeds.conf.default
-echo 'src-git packages https://git.openwrt.org/feed/packages.git' >>feeds.conf.default
-echo 'src-git luci https://git.openwrt.org/project/luci.git' >>feeds.conf.default
-echo 'src-git routing https://git.openwrt.org/feed/routing.git' >>feeds.conf.default
-echo 'src-git telephony https://git.openwrt.org/feed/telephony.git' >>feeds.conf.default
+
 
 if [ "$(grep -c "AXT1800" $GITHUB_ENV)" -eq '1' ];then
+  rm -rf feeds.conf.default
+  touch feeds.conf.default
+  echo 'src-git packages https://git.openwrt.org/feed/packages.git' >>feeds.conf.default
+  echo 'src-git luci https://git.openwrt.org/project/luci.git' >>feeds.conf.default
+  echo 'src-git routing https://git.openwrt.org/feed/routing.git' >>feeds.conf.default
+  echo 'src-git telephony https://git.openwrt.org/feed/telephony.git' >>feeds.conf.default
   echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x' >>feeds.conf.default
   echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >>feeds.conf.default
-  echo 'src-git mihomo https://github.com/morytyann/OpenWrt-mihomo.git' >>feeds.conf.default
   echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >>feeds.conf.default
   echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages' >>feeds.conf.default
   echo 'src-git small https://github.com/kenzok8/small' >>feeds.conf.default
-  echo 'src-git smoothwan https://github.com/SmoothWAN/SmoothWAN-feeds' >>feeds.conf.default
   git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/bin/config_generate && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/etc/banner && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 include/version.mk && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh && echo "Done"
   echo "26768f9df0f6231779971745d5152147" > vermagic && echo "vermagic done"
   sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk

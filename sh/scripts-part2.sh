@@ -16,6 +16,7 @@ find ./ | grep Makefile | grep mosdns | xargs rm -f
 find ./ | grep Makefile | grep turboacc | xargs rm -f
 find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
+find ./ | grep Makefile | grep homeproxy | xargs rm -f
 if [ "$(grep -c "AXT1800" $GITHUB_ENV)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
@@ -46,6 +47,7 @@ git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
 git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
+git clone --depth 1 https://github.com/muink/homeproxy.git package/homeproxy
 
 
 
