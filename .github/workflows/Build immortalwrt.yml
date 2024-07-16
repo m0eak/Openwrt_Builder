@@ -81,6 +81,7 @@ jobs:
     - name: Load custom configuration
       run: |
         echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
