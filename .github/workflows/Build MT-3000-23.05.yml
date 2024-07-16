@@ -61,9 +61,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-    - name: Set workflow name to GITHUB_ENV
-      run: echo "WORKFLOW_NAME=$(echo $GITHUB_WORKFLOW | tr ' ' '_')" >> $GITHUB_ENV
-
     - name: Clone source code
       working-directory: /workdir
       run: |
@@ -73,6 +70,8 @@ jobs:
 
     - name: Load custom feeds
       run: |
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt

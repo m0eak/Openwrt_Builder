@@ -57,9 +57,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-    - name: Set workflow name to GITHUB_ENV
-      run: echo "WORKFLOW_NAME=$(echo $GITHUB_WORKFLOW | tr ' ' '_')" >> $GITHUB_ENV
-
     - name: Clone source code
       working-directory: /workdir
       run: |
@@ -83,6 +80,8 @@ jobs:
 
     - name: Load custom configuration
       run: |
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
