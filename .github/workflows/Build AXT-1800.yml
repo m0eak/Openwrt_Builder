@@ -89,8 +89,7 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
-        echo "Part-1 Start" && $GITHUB_WORKSPACE/$DIY_P1_SH
-        echo "Part-1 End"
+        echo "Part-1 Start" && $GITHUB_WORKSPACE/$DIY_P1_SH && echo "Part-1 End"
 
 
     - name: 更新源
