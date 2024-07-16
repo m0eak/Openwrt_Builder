@@ -71,7 +71,7 @@ jobs:
       run: |
         df -hT $PWD
         echo "正在克隆..."
-        git clone --depth 1 --branch $REPO_BRANCH $REPO_URL openwrt
+        git clone --branch $REPO_BRANCH $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt 
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
