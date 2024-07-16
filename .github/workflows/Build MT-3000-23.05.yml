@@ -30,8 +30,8 @@ env:
   REPO_BRANCH: openwrt-23.05
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/mt3000.config
-  DIY_P1_SH: ./sh/mt3000-part1.sh
-  DIY_P2_SH: ./sh/mt3000-part2.sh
+  DIY_P1_SH: ./sh/scripts-part1.sh
+  DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
