@@ -17,7 +17,7 @@ find ./ | grep Makefile | grep turboacc | xargs rm -f
 find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
 find ./ | grep Makefile | grep homeproxy | xargs rm -f
-if [ "$(grep -c "AXT1800" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
   find ./ | grep Makefile | grep app-store | xargs rm -f
@@ -33,11 +33,11 @@ if [ "$(grep -c "AXT1800" $GITHUB_ENV)" -eq '1' ];then
   sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
   echo "axt1800 part-2"
 fi
-if [ "$(grep -c "immortalwrt" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
   echo "immortalwrt part-2"
 fi
-if [ "$(grep -c "MT3000" $GITHUB_ENV)" -eq '1' ];then
+if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'ImmortalWrt'/'GL-MT3000'/g' ./package/base-files/files/bin/config_generate
   echo "MT3000 part-2"
