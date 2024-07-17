@@ -1,5 +1,4 @@
 #!/bin/sh
-need_restart=0
 until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
   sleep 1
 done
