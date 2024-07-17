@@ -315,10 +315,10 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
 fi
 if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
+  echo "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
+  echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
   sed -i 's/services/vpn/g' /usr/share/luci/menu.d/luci-app-tailscale.json && rm -rf luci-indexcache.*.json
