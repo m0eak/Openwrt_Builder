@@ -32,6 +32,7 @@ on:
 env:
   REPO_URL: https://github.com/m0eak/openwrt-6.x.git
   REPO_BRANCH: main
+  REPO_TAG: k6.6.36
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
@@ -74,6 +75,7 @@ jobs:
         git clone --branch $REPO_BRANCH $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt 
+        git checkout $REPO_TAG
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 加载自定义源
