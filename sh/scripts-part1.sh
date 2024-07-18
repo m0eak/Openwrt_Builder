@@ -15,10 +15,10 @@
 
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
-cat $TAG
+echo $TAG
 VERSION=${TAG#v} && echo "当前版本：" && echo $VERSION
-cat $GITHUB_OUTPUT
-cat $GITHUB_ENV
+echo $GITHUB_OUTPUT
+echo $GITHUB_ENV
 
 
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
