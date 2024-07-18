@@ -51,6 +51,7 @@ if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
     if [ "$(grep -c "Openwrt" $GITHUB_OUTPUT)" -eq '1' ];then
     # 修补的firewall4、libnftnl、nftables与952补丁
     # curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+    echo 'src-git smpackage https://github.com/kenzok8/small-package' >> feeds.conf.default
     curl -s https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/openwrt-$VERSION-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic
     sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
     sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
