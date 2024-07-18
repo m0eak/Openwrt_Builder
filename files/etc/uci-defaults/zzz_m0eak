@@ -1,4 +1,5 @@
 #!/bin/sh
+VERSION=replace
 until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
   sleep 1
 done
@@ -285,12 +286,22 @@ if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
 fi
 if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "ImmortalWrt" /etc/openwrt_release)" -ne '0' ]  && [ "$(grep -c "23.05.2" /etc/openwrt_release)" -ne '0' ];then
   cat <<EOL > /etc/opkg/distfeeds.conf
-src/gz immortalwrt_core https://mirrors.vsean.net/openwrt/releases/23.05.2/targets/x86/64/packages
-src/gz immortalwrt_base https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/base
-src/gz immortalwrt_luci https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/luci
-src/gz immortalwrt_packages https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/packages
-src/gz immortalwrt_routing https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/routing
-src/gz immortalwrt_telephony https://mirrors.vsean.net/openwrt/releases/23.05.2/packages/x86_64/telephony
+src/gz immortalwrt_core https://mirrors.vsean.net/openwrt/releases/$VERSION/targets/x86/64/packages
+src/gz immortalwrt_base https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/base
+src/gz immortalwrt_luci https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/luci
+src/gz immortalwrt_packages https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/packages
+src/gz immortalwrt_routing https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/routing
+src/gz immortalwrt_telephony https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/telephony
+EOL
+fi
+if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "OpenWrt" /etc/openwrt_release)" -ne '0' ]  && [ "$(grep -c "23.05.2" /etc/openwrt_release)" -ne '0' ];then
+  cat <<EOL > /etc/opkg/distfeeds.conf
+src/gz openwrt_core https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/packages
+src/gz openwrt_base https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/base
+src/gz openwrt_luci https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/luci
+src/gz openwrt_packages https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/packages
+src/gz openwrt_routing https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/routing
+src/gz openwrt_telephony https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/telephony
 EOL
 fi
 if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
