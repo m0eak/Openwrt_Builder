@@ -17,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: '选择分支（还没写好不要改）'
+        description: '选择分支'
         required: true
         default: '23.05.2'
       ssh:
@@ -30,15 +30,15 @@ env:
   REPO_BRANCH: openwrt-23.05
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/mt3000.config
-  DIY_P1_SH: ./sh/mt3000-part1.sh
-  DIY_P2_SH: ./sh/mt3000-part2.sh
+  DIY_P1_SH: ./sh/scripts-part1.sh
+  DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
   UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: v23.05.2
+  TAG: ${{ github.event.inputs.branch }}
 
 jobs:
   build:
@@ -70,6 +70,8 @@ jobs:
 
     - name: Load custom feeds
       run: |
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
@@ -84,7 +86,8 @@ jobs:
 
     - name: Load custom configuration
       run: |
-        [ -e files ] && mv ./files/files-mt3000 openwrt/files
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt

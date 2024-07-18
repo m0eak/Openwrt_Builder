@@ -16,10 +16,14 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      istore:
+        description: 'istore'
+        required: false
+        default: 'true'
       docker:
         description: '是否编译docker'
         required: false
-        default: 'false'
+        default: 'true'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
@@ -28,11 +32,13 @@ on:
 env:
   REPO_URL: https://github.com/m0eak/openwrt-6.x.git
   REPO_BRANCH: main
+  REPO_TAG: k6.6.36
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
-  DIY_P1_SH: ./sh/axt-part1.sh
-  DIY_P2_SH: ./sh/axt-part2.sh
+  CONFIG_FILE_ISTORE: ./config/istore.config
+  DIY_P1_SH: ./sh/scripts-part1.sh
+  DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_COWTRANSFER: false
@@ -66,17 +72,21 @@ jobs:
       run: |
         df -hT $PWD
         echo "正在克隆..."
-        git clone --depth 1 --branch $REPO_BRANCH $REPO_URL openwrt
+        git clone --branch $REPO_BRANCH $REPO_URL openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt 
+        git checkout $REPO_TAG
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 加载自定义源
       run: |
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
-        $GITHUB_WORKSPACE/$DIY_P1_SH
+        echo "Part-1 Start" && $GITHUB_WORKSPACE/$DIY_P1_SH && echo "Part-1 End"
+
 
     - name: 更新源
       run: cd openwrt && ./scripts/feeds update -a
@@ -94,7 +104,8 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        [ -e files ] && mv ./files/files-axt1800 openwrt/files
+        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        [ -e files ] && mv ./files openwrt/files
         if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
           echo "加载自定义 docker 配置..."
           [ -e $CONFIG_FILE ] && cp $CONFIG_FILE openwrt/.config
@@ -102,6 +113,10 @@ jobs:
         else
           echo "加载自定义配置..."
           [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        fi
+        if [[ ${{ github.event.inputs.istore }} == 'true' ]]; then
+          echo "加载自定义 istore 配置..."
+          [ -e $CONFIG_FILE_ISTORE ] && cat $CONFIG_FILE_ISTORE >> openwrt/.config
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
@@ -133,7 +148,7 @@ jobs:
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        cat $GITHUB_ENV
+        cat $GITHUB_OUTPUT
         echo "compile=success" >> $GITHUB_OUTPUT
         if [ -s DEVICE_NAME ]; then
           echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
@@ -161,6 +176,7 @@ jobs:
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
         echo "status=success" >> $GITHUB_ENV
         echo "organize=success" >> $GITHUB_OUTPUT
+        cat $GITHUB_ENV
 
     - name: 上传固件目录
       uses: actions/upload-artifact@main

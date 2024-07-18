@@ -1,3 +1,0 @@
-0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches
-0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart
-30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart
