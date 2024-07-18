@@ -320,7 +320,6 @@ EOL
     /etc/init.d/network restart
   fi
 fi
-fi
 
 need_restart=0
 
