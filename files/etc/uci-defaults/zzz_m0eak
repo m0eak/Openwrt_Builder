@@ -4,7 +4,9 @@ until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
 done
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
-sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
+if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
+  sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
+fi
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.enabled='1'
   uci set mosdns.config.redirect='0'
