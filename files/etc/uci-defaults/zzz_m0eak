@@ -1,10 +1,11 @@
 #!/bin/sh
 VERSION=replace
+touch /etc/crontabs/root
+chmod +x /usr/share/extpart.sh
+ln -s /usr/share/extpart.sh /bin/extpart
 until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
   sleep 1
 done
-chmod +x /usr/share/extpart.sh
-ln -s /usr/share/extpart.sh /bin/extpart
 if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
   sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 fi
@@ -323,15 +324,13 @@ fi
 
 need_restart=0
 
-touch /etc/crontabs/root
-
 if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
 fi
-if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
+if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
   echo "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
-if [-e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
+if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
   echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
