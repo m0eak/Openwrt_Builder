@@ -323,7 +323,7 @@ fi
 
 need_restart=0
 
-torch /etc/crontabs/root
+touch /etc/crontabs/root
 
 if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
