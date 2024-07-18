@@ -67,6 +67,7 @@ jobs:
         df -hT $PWD
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        cd openwrt
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: Load custom feeds
@@ -84,7 +85,7 @@ jobs:
     - name: Install feeds
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Apply patches   
+    - name: Apply patches  
       run: |
         git config --global user.name "OpenWrt Builder"
         git config --global user.email "buster-openwrt@ovvo.uk"
