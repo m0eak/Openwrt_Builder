@@ -16,6 +16,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      tag:
+        description: '选择版本'
+        required: true
+        default: 'v23.05.4'
       ssh:
         description: 'SSH connection to Actions'
         required: false
@@ -34,7 +38,7 @@ env:
   UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: v23.05.4
+  TAG: ${{ github.event.inputs.tag }}
 
 jobs:
   build:
@@ -77,6 +81,14 @@ jobs:
 
     - name: Install feeds
       run: cd openwrt && ./scripts/feeds install -a
+
+    - name: Apply patches   
+      run: |
+        git config --global user.name "OpenWrt Builder"
+        git config --global user.email "buster-openwrt@ovvo.uk"
+        cd $OPENWRT_PATH/feeds/luci
+        wget https://raw.githubusercontent.com/openwrt-ipq60xx/patches/main/feeds/luci/0001-show-soc-status-on-luci.patch
+        git am 0001-show-soc-status-on-luci.patch
 
     - name: Load custom configuration
       run: |

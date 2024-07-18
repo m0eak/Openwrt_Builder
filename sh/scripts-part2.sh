@@ -33,7 +33,7 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
   echo "axt1800 part-2"
 fi
-if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
+if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
   echo "immortalwrt part-2"
 fi
