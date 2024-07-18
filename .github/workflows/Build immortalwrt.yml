@@ -16,6 +16,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
+      tag:
+        description: '选择版本'
+        required: true
+        default: 'v23.05.2'
       ssh:
         description: 'SSH connection to Actions'
         required: false
@@ -34,7 +38,7 @@ env:
   UPLOAD_WETRANSFER: true
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: v23.05.2
+  TAG: ${{ github.event.inputs.tag }}
 
 jobs:
   build:
@@ -169,7 +173,7 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.compile == 'success' && !cancelled()
       run: |
-        echo "::set-output name=release_tag::immortalwrt-$(date +"%Y.%m.%d-%H%M")"
+        echo "::set-output name=release_tag::immortalwrt-${TAG#v}-$(date +"%Y.%m.%d-%H%M")"
         touch release.txt
         [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
         [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt

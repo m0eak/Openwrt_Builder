@@ -285,7 +285,7 @@ if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
     echo "src/gz openwrt_telephony https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/telephony" >> /etc/opkg/distfeeds.conf
   fi
 fi
-if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "ImmortalWrt" /etc/openwrt_release)" -ne '0' ]  && [ "$(grep -c "23.05.2" /etc/openwrt_release)" -ne '0' ];then
+if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "ImmortalWrt" /etc/openwrt_release)" -ne '0' ];then
   cat <<EOL > /etc/opkg/distfeeds.conf
 src/gz immortalwrt_core https://mirrors.vsean.net/openwrt/releases/$VERSION/targets/x86/64/packages
 src/gz immortalwrt_base https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/base
@@ -295,7 +295,7 @@ src/gz immortalwrt_routing https://mirrors.vsean.net/openwrt/releases/$VERSION/p
 src/gz immortalwrt_telephony https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/telephony
 EOL
 fi
-if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "OpenWrt" /etc/openwrt_release)" -ne '0' ]  && [ "$(grep -c "23.05.2" /etc/openwrt_release)" -ne '0' ];then
+if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "OpenWrt" /etc/openwrt_release)" -ne '0' ];then
   cat <<EOL > /etc/opkg/distfeeds.conf
 src/gz openwrt_core https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/packages
 src/gz openwrt_base https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/base

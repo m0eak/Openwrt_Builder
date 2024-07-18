@@ -85,14 +85,6 @@ jobs:
     - name: Install feeds
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Apply patches  
-      run: |
-        git config --global user.name "OpenWrt Builder"
-        git config --global user.email "buster-openwrt@ovvo.uk"
-        cd $OPENWRT_PATH/feeds/luci
-        wget https://raw.githubusercontent.com/openwrt-ipq60xx/patches/main/feeds/luci/0001-show-soc-status-on-luci.patch
-        git am 0001-show-soc-status-on-luci.patch
-
     - name: Load custom configuration
       run: |
         echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
