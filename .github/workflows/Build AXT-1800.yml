@@ -36,8 +36,8 @@ env:
   CONFIG_FILE_X86: ./config/openwrt-x86_64.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
-  DIY_P1_SH: ./sh/scripts-part1.sh
-  DIY_P2_SH: ./sh/scripts-part2.sh
+  DIY_P1_SH: $GITHUB_WORKSPACE/sh/scripts-part1.sh
+  DIY_P2_SH: $GITHUB_WORKSPACE/sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
@@ -92,7 +92,7 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ matrix.target }}">> $GITHUB_OUTPUT
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
