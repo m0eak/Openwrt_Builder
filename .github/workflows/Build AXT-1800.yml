@@ -17,7 +17,7 @@ on:
       kernel:
         description: 'Kernel'
         required: false
-        default: '6.6.36'
+        default: 'k6.6.36'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
@@ -67,6 +67,10 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
+      - name: 合并磁盘
+        run: |
+          bash $GITHUB_WORKSPACE/sh/merge.sh
+
     - name: 克隆源代码
       working-directory: /workdir
       run: |
@@ -76,7 +80,7 @@ jobs:
           git clone --branch $REPO_BRANCH $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt 
-          git checkout ${{ github.event.inputs.kernel}}
+          git checkout ${{ github.event.inputs.kernel }}
         else
           REPO_URL=$REPO_URL_X86
           git clone $REPO_URL -b $REPO_BRANCH openwrt
