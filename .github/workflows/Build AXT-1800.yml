@@ -76,7 +76,7 @@ jobs:
           git clone --branch $REPO_BRANCH $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt 
-          git checkout ${{ github.event.inputs.kernel || 'main' }}
+          git checkout ${{ github.event.inputs.kernel}}
         else
           REPO_URL=$REPO_URL_X86
           git clone $REPO_URL -b $REPO_BRANCH openwrt
