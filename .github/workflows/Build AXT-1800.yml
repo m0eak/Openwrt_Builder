@@ -24,6 +24,10 @@ on:
         description: '是否编译docker'
         required: false
         default: 'true'
+      kernel:
+        description: 'Kernel'
+        required: false
+        default: '6.6.36'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
