@@ -1,9 +1,8 @@
-name: Build OpenWrt
+name: Build test
 
 on:
   schedule:
     - cron: '0 16 * * 1'
-    - cron: '0 19 * * 3'
   repository_dispatch:
   workflow_dispatch:
     inputs:
