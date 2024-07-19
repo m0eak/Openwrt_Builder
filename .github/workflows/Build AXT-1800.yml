@@ -67,10 +67,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-    - name: 合并磁盘
-      run: |
-        bash $GITHUB_WORKSPACE/sh/merge.sh
-
     - name: 克隆源代码
       working-directory: /workdir
       run: |
@@ -95,7 +91,7 @@ jobs:
         echo "WORKFLOW_NAME=${{ matrix.target }}">> $GITHUB_OUTPUT
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        chmod +x $GITHUB_WORKSPACE/sh/scripts-part1.sh
+        chmod +x $$DIY_P1_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
