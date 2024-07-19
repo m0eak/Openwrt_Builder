@@ -276,6 +276,7 @@ if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
   echo "src/gz m0eak_packages https://package.m0eak.cc/packages/aarch64_cortex-a53/packages" >> /etc/opkg/customfeeds.conf
   echo "src/gz is_nas https://istore.linkease.com/repo/aarch64_cortex-a53/nas" >> /etc/opkg/customfeeds.conf
   echo "src/gz is_nas_luci https://istore.linkease.com/repo/all/nas_luci" >> /etc/opkg/customfeeds.conf
+  echo "src/gz is_store https://istore.linkease.com/repo/all/store/" >> /etc/opkg/customfeeds.conf
   if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
     echo "src/gz openwrt_core https://mirror.nju.edu.cn/immortalwrt/snapshots/targets/qualcommax/ipq807x/kmods/6.6.36-1-26768f9df0f6231779971745d5152147" >> /etc/opkg/customfeeds.conf
     echo "src/gz openwrt_base https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/base/" > /etc/opkg/distfeeds.conf
