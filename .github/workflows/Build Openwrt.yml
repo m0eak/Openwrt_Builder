@@ -12,7 +12,7 @@ name: Build x86 Openwrt
 
 on:
   schedule:
-    - cron: '0 16 * * 3'
+    - cron: '0 19 * * 3'
   repository_dispatch:
   workflow_dispatch:
     inputs:
