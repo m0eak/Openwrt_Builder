@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [axt1800, x86]
+        target: [AXT-1800, x86-Openwrt]
     
     steps:
     - name: Checkout
@@ -71,7 +71,7 @@ jobs:
       working-directory: /workdir
       run: |
         df -hT $PWD
-        if [[ "${{ matrix.target }}" == "axt1800" ]]; then
+        if [[ "${{ matrix.target }}" == "AXT-1800" ]]; then
           REPO_URL=$REPO_URL_AXT
           git clone --branch $REPO_BRANCH $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
@@ -88,7 +88,7 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
@@ -102,7 +102,7 @@ jobs:
       run: cd openwrt && ./scripts/feeds install -a
 
     - name: Apply patches
-      if: matrix.target == 'axt1800'
+      if: matrix.target == 'AXT-1800'
       run: |
         git config --global user.name "OpenWrt Builder"
         git config --global user.email "buster-openwrt@ovvo.uk"
@@ -112,9 +112,9 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         [ -e files ] && mv ./files openwrt/files
-        if [[ ${{ matrix.target }} == 'axt1800' ]]; then
+        if [[ ${{ matrix.target }} == 'AXT-1800' ]]; then
           if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
             echo "加载自定义 docker 配置..."
             [ -e $CONFIG_FILE_AXT ] && cp $CONFIG_FILE_AXT openwrt/.config
