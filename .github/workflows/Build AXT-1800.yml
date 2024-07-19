@@ -67,9 +67,9 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
 
-      - name: 合并磁盘
-        run: |
-          bash $GITHUB_WORKSPACE/sh/merge.sh
+    - name: 合并磁盘
+      run: |
+        bash $GITHUB_WORKSPACE/sh/merge.sh
 
     - name: 克隆源代码
       working-directory: /workdir
