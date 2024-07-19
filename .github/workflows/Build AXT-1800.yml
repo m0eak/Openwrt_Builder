@@ -24,6 +24,10 @@ on:
         description: '是否编译docker'
         required: false
         default: 'true'
+      vermagic:
+        description: 'Vermagic'
+        required: false
+        default: '26768f9df0f6231779971745d5152147'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
