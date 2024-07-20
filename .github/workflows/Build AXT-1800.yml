@@ -101,7 +101,7 @@ jobs:
           git clone $REPO_URL openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt
-          git checkout ${{ github.event.inputs.tag }}
+          git checkout ${{ github.event.inputs.tag2 }}
         fi
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
