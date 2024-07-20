@@ -19,8 +19,8 @@ echo $TAG
 echo $TAG2
 echo $KERNEL_NAME
 KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
-VERSION=${TAG#v} && echo "当前版本：$VERSION"
-VERSION2=${TAG2#v} && echo "当前版本：$VERSION2"
+VERSION=${TAG#v} && echo "op当前版本：$VERSION"
+VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
 
 
