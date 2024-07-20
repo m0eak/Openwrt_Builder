@@ -30,11 +30,12 @@ on:
 env:
   REPO_URL_AXT: https://github.com/m0eak/openwrt-6.x.git
   REPO_URL_X86: https://github.com/openwrt/openwrt.git
-  REPO_URL_imm: https://github.com/openwrt/openwrt.git
+  REPO_URL_IMM: https://github.com/openwrt/openwrt.git
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_AXT: ./config/axt1800.config
   CONFIG_FILE_X86: ./config/openwrt-x86_64.config
+  CONFIG_FILE_IMM: ./config/immortalwrt.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -49,7 +50,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [AXT-1800, x86-Openwrt]
+        target: [AXT-1800, x86-Openwrt, x86-immortalwrt]
     
     steps:
     - name: Checkout
@@ -82,8 +83,16 @@ jobs:
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt 
           git checkout ${{ github.event.inputs.kernel }}
-        else
+        fi
+        if [[ "${{ matrix.target }}" == "x86-Openwrt" ]]; then
           REPO_URL=$REPO_URL_X86
+          git clone $REPO_URL -b $REPO_BRANCH openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          cd openwrt
+          git checkout ${{ github.event.inputs.tag }}
+        fi
+        if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
+          REPO_URL=$REPO_URL_IMM
           git clone $REPO_URL -b $REPO_BRANCH openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt
@@ -136,8 +145,12 @@ jobs:
             echo "加载自定义 istore 配置..."
             [ -e $CONFIG_FILE_ISTORE ] && cat $CONFIG_FILE_ISTORE >> openwrt/.config
           fi
-        else
+        fi
+        if [[ ${{ matrix.target }} == 'x86-Openwrt' ]]; then
           [ -e $CONFIG_FILE_X86 ] && mv $CONFIG_FILE_X86 openwrt/.config
+        fi
+        if [[ ${{ matrix.target }} == 'x86-immortalwrt' ]]; then
+          [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_X86 openwrt/.config
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
