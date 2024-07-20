@@ -30,6 +30,7 @@ on:
 env:
   REPO_URL_AXT: https://github.com/m0eak/openwrt-6.x.git
   REPO_URL_X86: https://github.com/openwrt/openwrt.git
+  REPO_URL_imm: https://github.com/openwrt/openwrt.git
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_AXT: ./config/axt1800.config
@@ -40,7 +41,7 @@ env:
   DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
-  UPLOAD_RELEASE: false
+  UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
 
 jobs:
@@ -92,8 +93,8 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        # echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
-        # echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         echo "当前 Kernel 版本：$KERNEL_NAME"
         cat $GITHUB_OUTPUT
         cat $GITHUB_ENV

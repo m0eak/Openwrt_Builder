@@ -35,7 +35,11 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages' >> feeds.conf.default
   echo 'src-git small https://github.com/kenzok8/small' >> feeds.conf.default
   git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/bin/config_generate && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/etc/banner && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 include/version.mk && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh && echo "Done"
-  echo "26768f9df0f6231779971745d5152147" > vermagic && echo "vermagic done"
+  #echo "26768f9df0f6231779971745d5152147" > vermagic && echo "vermagic done"
+  wget -qO- https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq807x/kmods/ | grep -oP '$KERNEL-1-\K[0-9a-f]+' | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
+  sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
+  sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
+  echo "Openwrt Vermagic Done"
   sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
   sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
   # sed -i '49s/0x3/0xf/;56s/0x3/0xf/;63s/0x1/0xf/;70s/0x1/0xf/' ./target/linux/qualcommax/patches-6.6/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch
