@@ -226,22 +226,34 @@ jobs:
       id: tag
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
-        RELEASE_TAG=${{ steps.compile.outputs.device-name }}${{ steps.compile.outputs.file-date }}
-        echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
-        echo "release-tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
+        echo "生成发布标签..."
+        echo "release_tag=$WORKFLOW_NAME-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+        touch release.txt
+        echo "tag=success" >> $GITHUB_OUTPUT
 
     - name: 发布固件
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.release-tag && !cancelled()
+      if: steps.tag.outputs.tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ env.RELEASE_TAG }}
-        name: OpenWrt
-        files: |
-          ${{ env.FIRMWARE }}/*-squashfs-sysupgrade.bin
-          ${{ env.FIRMWARE }}/*-rootfs.tar.gz
-          ${{ env.FIRMWARE }}/*-kernel.bin
-          ${{ env.FIRMWARE }}/*.img.gz
-          ${{ env.FIRMWARE }}/*-squashfs-combined-efi.img.gz
-        body: |
-          #### SHA256 校验:
-          `${{ env.FIRMWARE }}/*.sha256sum`
+        tag_name: ${{ env.release_tag }}
+        body_path: release.txt
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      with:
+        retain_days: 1
+        keep_minimum_runs: 3
+  
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 10
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  
