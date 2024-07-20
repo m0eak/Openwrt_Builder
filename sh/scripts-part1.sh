@@ -16,8 +16,8 @@
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 echo $TAG
-echo ${{ github.event.inputs.kernel }}
-KERNEL=${${{ github.event.inputs.kernel }}#k} && echo "当前Kernel：$KERNEL"
+echo $KERNEL_NAME
+KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
 VERSION=${TAG#v} && echo "当前版本：$VERSION"
 echo $GITHUB_OUTPUT
 echo $GITHUB_ENV
