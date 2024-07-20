@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [x86-immortalwrt]
+        target: [AXT-1800, x86-immortalwrt]
     
     steps:
     - name: Checkout
