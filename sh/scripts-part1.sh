@@ -16,9 +16,11 @@
 # Add a feed source
 # echo 'src-git helloworld https://github.com/fw876/helloworld' >>feeds.conf.default
 echo $TAG
+echo $TAG2
 echo $KERNEL_NAME
 KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
 VERSION=${TAG#v} && echo "当前版本：$VERSION"
+VERSION2=${TAG2#v} && echo "当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
 
 
@@ -48,8 +50,8 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
 fi
 if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
   if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
-    sed -i "s/replace/$VERSION/g" $GITHUB_WORKSPACE/files/etc/uci-defaults/zzz_m0eak && echo "VERSION替换成功"
-    curl -s https://downloads.immortalwrt.org/releases/$VERSION/targets/x86/64/immortalwrt-$VERSION-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic 
+    sed -i "s/replace/$VERSION2/g" $GITHUB_WORKSPACE/files/etc/uci-defaults/zzz_m0eak && echo "VERSION替换成功"
+    curl -s https://downloads.immortalwrt.org/releases/$VERSION2/targets/x86/64/immortalwrt-$VERSION2-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic 
     sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
     sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
     echo "Immortalwrt Vermagic Done"

@@ -23,9 +23,13 @@ on:
         required: false
         default: 'false'
       tag:
-        description: '选择版本'
+        description: 'Openwrt版本'
         required: true
         default: 'v23.05.4'
+      tag2:
+        description: 'ImmortalWrt版本'
+        required: true
+        default: 'v23.05.3'
 
 env:
   REPO_URL_AXT: https://github.com/m0eak/openwrt-6.x.git
@@ -50,7 +54,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [AXT-1800, x86-Openwrt]
+        target: [AXT-1800, x86-Openwrt, x86-immortalwrt]
     
     steps:
     - name: Checkout
@@ -71,6 +75,7 @@ jobs:
         echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" >> $GITHUB_ENV
         echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_ENV
         echo "TAG=${{ github.event.inputs.tag }}" | tr ' ' '_' >> $GITHUB_ENV
+        echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
     - name: 克隆源代码
