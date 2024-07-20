@@ -88,7 +88,8 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ matrix.target }}">> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_ENV
+        cat $GITHUB_ENV
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
