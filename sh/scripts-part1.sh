@@ -59,9 +59,8 @@ if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
     curl -s https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/openwrt-$VERSION-x86-64.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic && echo "Openwrt Vermagic Done" && echo "当前Vermagic：" && cat vermagic
     sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
     sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
-    
+    echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages.git' >> feeds.conf.default
   fi
-  echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages.git' >> feeds.conf.default
 fi
 if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> feeds.conf.default
