@@ -88,8 +88,8 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_ENV
-        cat $GITHUB_ENV
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
         echo "WORKFLOW_NAME is $WORKFLOW_NAME"
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
@@ -114,6 +114,7 @@ jobs:
     - name: 加载自定义配置
       run: |
         echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
         [ -e files ] && mv ./files openwrt/files
         if [[ ${{ matrix.target }} == 'AXT-1800' ]]; then
           if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
