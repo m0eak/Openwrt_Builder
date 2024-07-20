@@ -92,8 +92,8 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
-        echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        # echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        # echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         echo "当前 Kernel 版本：$KERNEL_NAME"
         cat $GITHUB_OUTPUT
         cat $GITHUB_ENV
