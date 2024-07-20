@@ -19,8 +19,7 @@ echo $TAG
 echo $KERNEL_NAME
 KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
 VERSION=${TAG#v} && echo "当前版本：$VERSION"
-echo $GITHUB_OUTPUT
-echo $GITHUB_ENV
+cat $GITHUB_OUTPUT
 
 
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then

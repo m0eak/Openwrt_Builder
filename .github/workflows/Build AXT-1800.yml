@@ -66,6 +66,10 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
+        echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" >> $GITHUB_ENV
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_ENV
+        echo "TAG=${{ github.event.inputs.tag }}" | tr ' ' '_' >> $GITHUB_ENV
+
 
     - name: 克隆源代码
       working-directory: /workdir
@@ -92,6 +96,7 @@ jobs:
         echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
         echo "当前 Kernel 版本：$KERNEL_NAME"
         cat $GITHUB_OUTPUT
+        cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
