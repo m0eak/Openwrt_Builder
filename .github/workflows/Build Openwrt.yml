@@ -15,7 +15,7 @@ on:
         required: false
         default: 'true'
       kernel:
-        description: 'Kernel'
+        description: 'Kernel-AXT1800'
         required: false
         default: 'k6.6.36'
       ssh:
@@ -226,10 +226,24 @@ jobs:
       id: tag
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
-        echo "生成发布标签..."
-        echo "release_tag=$WORKFLOW_NAME-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-        touch release.txt
-        echo "tag=success" >> $GITHUB_OUTPUT
+        if [[ "${{ matrix.target }}" == "AXT-1800" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
+        if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-$TAG2-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
+        if [[ "${{ matrix.target }}" == "x86-Openwrt" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-$TAG-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
 
     - name: 发布固件
       uses: softprops/action-gh-release@v1
