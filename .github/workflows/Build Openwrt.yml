@@ -228,7 +228,7 @@ jobs:
       run: |
         if [[ "${{ matrix.target }}" == "AXT-1800" ]]; then
           echo "生成发布标签..."
-          echo "release_tag=$WORKFLOW_NAME-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_tag=$WORKFLOW_NAME-${KERNEL_NAME#k}-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           touch release.txt
           echo "tag=success" >> $GITHUB_OUTPUT
         fi
