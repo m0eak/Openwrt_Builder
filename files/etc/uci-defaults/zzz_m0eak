@@ -14,13 +14,13 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.redirect='0'
   uci set mosdns.config.custom_local_dns='1'
   uci set mosdns.config.dns_leak='1'
-  uci add_list mosdns.config.local_dns='https://dns.alidns.com/dns-query'
   uci add_list mosdns.config.local_dns='https://doh.pub/dns-query'
   uci add_list mosdns.config.local_dns='https://doh.360.cn/dns-query'
   uci add_list mosdns.config.remote_dns='tls://1.1.1.1'
   uci add_list mosdns.config.remote_dns='tls://8.8.8.8'
   uci add_list mosdns.config.remote_dns='tls://9.9.9.9'
   uci add_list mosdns.config.remote_dns='tls://208.67.222.222'
+  uci set mosdns.config.bootstrap_dns='114.114.114.114'
   uci commit mosdns
   /etc/init.d/mosdns restart
 fi
