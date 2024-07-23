@@ -22,7 +22,6 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci add_list mosdns.config.remote_dns='tls://9.9.9.9'
   uci add_list mosdns.config.remote_dns='tls://208.67.222.222'
   uci commit mosdns
-  uci commit mosdns
   /etc/init.d/mosdns restart
 fi
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
@@ -41,11 +40,13 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
   /etc/init.d/dnsmasq restart
 fi
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^cpufreq")" -ne '0' ];then
-  uci set cpufreq.cpufreq.governor0='conservative'
-  uci set cpufreq.cpufreq.minfreq0='864000'
-  uci set cpufreq.cpufreq.maxfreq0='1800000'
-  uci commit cpufreq
-  /etc/init.d/cpufreq restart
+uci set cpufreq.cpufreq.governor0='ondemand'
+uci set cpufreq.cpufreq.sdfactor0='10'
+uci set cpufreq.cpufreq.upthreshold0='50'
+uci set cpufreq.cpufreq.minfreq0='864000'
+uci set cpufreq.cpufreq.maxfreq0='1800000'
+uci commit cpufreq
+/etc/init.d/cpufreq restart
 fi
 if [ "$( opkg list-installed 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$(uci -q get smartdns.@server[0].name)" = "清华大学TUNA协会" ];then
   uci set smartdns.@smartdns[0].prefetch_domain='1'
@@ -310,12 +311,17 @@ if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
   cat <<EOL > /etc/rc.local
 # Put your custom commands here that should be executed once
 # the system init finished. By default this file does nothing.
-/etc/init.d/cpufreq restart
 sysctl -w dev.nss.clock.auto_scale=1
 sleep 5s
 uci set wireless.radio2.country='AU'
 uci commit wireless
-exit 0
+uci set cpufreq.cpufreq.governor0='ondemand'
+uci set cpufreq.cpufreq.sdfactor0='10'
+uci set cpufreq.cpufreq.upthreshold0='50'
+uci set cpufreq.cpufreq.minfreq0='864000'
+uci set cpufreq.cpufreq.maxfreq0='1800000'
+uci commit cpufreq
+/etc/init.d/cpufreq restart
 EOL
   if [ "$(grep -c "net.ipv4.tcp_congestion_control=cubic" /etc/sysctl.conf)" -eq '0' ];then
     echo "net.ipv4.tcp_congestion_control=cubic" >> /etc/sysctl.conf
