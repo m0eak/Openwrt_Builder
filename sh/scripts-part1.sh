@@ -40,7 +40,7 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   #echo "26768f9df0f6231779971745d5152147" > vermagic && echo "vermagic done"
   wget -qO- https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq807x/kmods/ | grep -oP '$KERNEL-1-\K[0-9a-f]+' | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
   if [ -z ./vermagic ]; then
-    echo "none'
+    echo "none"
   else
     sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
     sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
@@ -78,6 +78,3 @@ if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
   sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
 fi
-
-
-
