@@ -13,7 +13,7 @@ on:
       docker:
         description: '是否编译docker'
         required: false
-        default: 'true'
+        default: 'false'
       kernel:
         description: 'Kernel-AXT1800'
         required: false
