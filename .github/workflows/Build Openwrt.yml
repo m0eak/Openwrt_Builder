@@ -17,7 +17,7 @@ on:
       kernel:
         description: 'Kernel-AXT1800'
         required: false
-        default: 'k6.6.36'
+        default: 'k6.6.41'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        target: [AXT-1800]
+        target: [AXT-1800, x86-immortalwrt]
     
     steps:
     - name: Checkout
