@@ -24,11 +24,11 @@ on:
         default: 'false'
       tag:
         description: 'Openwrt版本'
-        required: true
+        required: false
         default: 'v23.05.4'
       tag2:
         description: 'ImmortalWrt版本'
-        required: true
+        required: false
         default: 'v23.05.3'
 
 env:
