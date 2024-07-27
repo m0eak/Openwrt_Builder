@@ -18,10 +18,6 @@ on:
         description: 'Kernel-AXT1800'
         required: false
         default: 'k6.6.41'
-      ssh:
-        description: 'SSH 连接到 Actions'
-        required: false
-        default: 'false'
       tag:
         description: 'Openwrt版本'
         required: false
@@ -30,6 +26,10 @@ on:
         description: 'ImmortalWrt版本'
         required: false
         default: 'v23.05.3'
+      ssh:
+        description: 'SSH 连接到 Actions'
+        required: false
+        default: 'false'
 
 env:
   REPO_URL_AXT: https://github.com/m0eak/openwrt-6.x.git
