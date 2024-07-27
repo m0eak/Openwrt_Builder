@@ -30,7 +30,8 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   git clone --depth 1 https://github.com/linkease/nas-packages-luci.git package/nas-packages-luci
   git clone --depth 1 https://github.com/linkease/nas-packages.git package/nas-packages
   git clone --depth 1 https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
-  git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
+  # git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
+  git clone -b test https://github.com/m0eak/turboacc.git
   # sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
   echo "axt1800 part-2"
 fi
