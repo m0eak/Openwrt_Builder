@@ -323,8 +323,8 @@ uci set cpufreq.cpufreq.maxfreq0='1800000'
 uci commit cpufreq
 /etc/init.d/cpufreq restart
 EOL
-  if [ "$(grep -c "net.ipv4.tcp_congestion_control=cubic" /etc/sysctl.conf)" -eq '0' ];then
-    echo "net.ipv4.tcp_congestion_control=cubic" >> /etc/sysctl.conf
+  if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
+    echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
     /etc/init.d/network restart
   fi
 fi
