@@ -38,7 +38,7 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   echo 'src-git small https://github.com/kenzok8/small' >> feeds.conf.default
   git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/bin/config_generate && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/base-files/files/etc/banner && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 include/version.mk && git checkout 0bd5323b7ad9e523584a156a0bd83881c4dea910 package/network/config/wifi-scripts/files/lib/wifi/mac80211.sh && echo "Done"
   #echo "26768f9df0f6231779971745d5152147" > vermagic && echo "vermagic done"
-  wget -qO- https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq807x/kmods/ | grep -oP '$KERNEL-1-\K[0-9a-f]+' | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
+  wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq807x/kmods/" | grep -oP "$KERNEL-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
   if [ -z ./vermagic ]; then
     echo "none"
   else
