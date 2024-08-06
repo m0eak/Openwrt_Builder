@@ -26,10 +26,10 @@ cat $GITHUB_OUTPUT
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   rm -rf feeds.conf.default
   touch feeds.conf.default
-  echo 'src-git packages https://git.openwrt.org/feed/packages.git^89955ee711d92e6fb6db7dde9d9d7eb06841acdb' >> feeds.conf.default
-  echo 'src-git luci https://git.openwrt.org/project/luci.git^85dec609ab12eee92601d492e4d472b01d71f7ae' >> feeds.conf.default
-  echo 'src-git routing https://git.openwrt.org/feed/routing.git^a82e34d5e402ec77fd5facc1349352cacda2d0f8' >> feeds.conf.default
-  echo 'src-git telephony https://git.openwrt.org/feed/telephony.git^98c8a5aa4624312ed758e2e2b6d4039050a1649d' >> feeds.conf.default
+  echo 'src-git packages https://git.openwrt.org/feed/packages.git' >> feeds.conf.default
+  echo 'src-git luci https://git.openwrt.org/project/luci.git' >> feeds.conf.default
+  echo 'src-git routing https://git.openwrt.org/feed/routing.git' >> feeds.conf.default
+  echo 'src-git telephony https://git.openwrt.org/feed/telephony.git' >> feeds.conf.default
   echo 'src-git nss_packages https://github.com/qosmio/nss-packages.git;NSS-12.5-K6.x' >> feeds.conf.default
   echo 'src-git sqm_scripts_nss https://github.com/qosmio/sqm-scripts-nss.git' >> feeds.conf.default
   echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> feeds.conf.default
