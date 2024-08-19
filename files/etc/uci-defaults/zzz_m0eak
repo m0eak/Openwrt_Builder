@@ -328,6 +328,13 @@ if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0
   echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
   /etc/init.d/network restart
 fi
+if [ "$( opkg list-installed 2>/dev/null| grep -c "turboacc")" -ne '0' ];then
+  uci set turboacc.config.fullcone_nat6='0'
+  uci set turboacc.config.bbr_cca='0'
+  uci set turboacc.config.sw_flow='0'
+  /etc/init.d/turboacc restart
+fi
+
 need_restart=0
 
 if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
