@@ -39,6 +39,8 @@ if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
   git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
   sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
   echo "immortalwrt part-2"
+  rm -rf feeds/packages/lang/golang
+  git clone https://github.com/sbwml/packages_lang_golang -b 22.x feeds/packages/lang/golang
 fi
 if [ "$(grep -c "Openwrt" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.100.100/g' package/base-files/files/bin/config_generate
