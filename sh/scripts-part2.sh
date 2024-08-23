@@ -26,12 +26,14 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   find ./ | grep Makefile | grep turboacc | xargs rm -f
   find ./ | grep Makefile | grep unishare | xargs rm -f
   find ./ | grep Makefile | grep webdav2 | xargs rm -f
+  find ./ | grep Makefile | grep luci-theme-design | xargs rm -f
   git clone --depth 1 https://github.com/linkease/istore.git package/istore
   git clone --depth 1 https://github.com/linkease/nas-packages-luci.git package/nas-packages-luci
   git clone --depth 1 https://github.com/linkease/nas-packages.git package/nas-packages
   git clone --depth 1 https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
   git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
   # sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
+  git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git
   echo "axt1800 part-2"
 fi
 if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
