@@ -169,13 +169,13 @@ jobs:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: 下载软件包
-      id: package
-      run: |
-        cd openwrt
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
+    # - name: 下载软件包
+    #   id: package
+    #   run: |
+    #     cd openwrt
+    #     make download -j8
+    #     find dl -size -1024c -exec ls -l {} \;
+    #     find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
       id: compile
