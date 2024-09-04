@@ -16,6 +16,7 @@ find ./ | grep Makefile | grep mosdns | xargs rm -f
 find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
 find ./ | grep Makefile | grep homeproxy | xargs rm -f
+find ./ | grep Makefile | grep wolplus | xargs rm -f
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
@@ -53,6 +54,7 @@ if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/'ImmortalWrt'/'GL-MT3000'/g' ./package/base-files/files/bin/config_generate
   echo "MT3000 part-2"
 fi
+git clone --depth 1 https://github.com/animegasan/luci-app-wolplus.git package/luci-app-wolplus
 git clone --depth 1 https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
 git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
