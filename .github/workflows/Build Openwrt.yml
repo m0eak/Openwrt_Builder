@@ -37,7 +37,7 @@ env:
   REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE_AXT: ./config/axt1800-ipt.config
+  CONFIG_FILE_AXT: ./config/axt1800.config
   CONFIG_FILE_X86: ./config/openwrt-x86_64.config
   CONFIG_FILE_IMM: ./config/immortalwrt.config
   CONFIG_FILE_DOCKER: ./config/docker.config
