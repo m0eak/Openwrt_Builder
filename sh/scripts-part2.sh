@@ -18,6 +18,7 @@ find ./ | grep Makefile | grep ddns-go | xargs rm -f
 find ./ | grep Makefile | grep homeproxy | xargs rm -f
 find ./ | grep Makefile | grep wolplus | xargs rm -f
 find ./ | grep Makefile | grep luci-theme-design | xargs rm -f
+find ./ | grep Makefile | grep design-config | xargs rm -f
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
@@ -61,6 +62,7 @@ git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddn
 git clone --depth 1 -b test https://github.com/m0eak/homeproxy.git package/homeproxy
 git clone --depth 1 https://github.com/m0eak/openwrt_patch.git ./package/custom
 git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git package/luci-theme-design
+git clone --depth 1 https://github.com/xuanranran/luci-app-design-config.git package/luci-app-design-config
 
 
 
