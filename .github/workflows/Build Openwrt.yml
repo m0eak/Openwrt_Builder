@@ -155,7 +155,7 @@ jobs:
           [ -e $CONFIG_FILE_X86 ] && mv $CONFIG_FILE_X86 openwrt/.config
         fi
         if [[ ${{ matrix.target }} == 'x86-immortalwrt' ]]; then
-          [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_X86 openwrt/.config
+          [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
