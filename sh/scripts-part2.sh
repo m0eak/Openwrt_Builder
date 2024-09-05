@@ -17,6 +17,7 @@ find ./ | grep Makefile | grep openclash | xargs rm -f
 find ./ | grep Makefile | grep ddns-go | xargs rm -f
 find ./ | grep Makefile | grep homeproxy | xargs rm -f
 find ./ | grep Makefile | grep wolplus | xargs rm -f
+find ./ | grep Makefile | grep luci-theme-design | xargs rm -f
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
   sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
@@ -27,14 +28,12 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
   find ./ | grep Makefile | grep turboacc | xargs rm -f
   find ./ | grep Makefile | grep unishare | xargs rm -f
   find ./ | grep Makefile | grep webdav2 | xargs rm -f
-  find ./ | grep Makefile | grep luci-theme-design | xargs rm -f
   git clone --depth 1 https://github.com/linkease/istore.git package/istore
   git clone --depth 1 https://github.com/linkease/nas-packages-luci.git package/nas-packages-luci
   git clone --depth 1 https://github.com/linkease/nas-packages.git package/nas-packages
   git clone --depth 1 https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
   git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
   # sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
-  git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git package/luci-theme-design
   echo "axt1800 part-2"
 fi
 if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
@@ -61,6 +60,7 @@ git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
 git clone --depth 1 -b test https://github.com/m0eak/homeproxy.git package/homeproxy
 git clone --depth 1 https://github.com/m0eak/openwrt_patch.git ./package/custom
+git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git package/luci-theme-design
 
 
 
