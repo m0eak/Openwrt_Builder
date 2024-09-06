@@ -131,9 +131,6 @@ jobs:
         cd $OPENWRT_PATH/feeds/luci
         wget https://raw.githubusercontent.com/openwrt-ipq60xx/patches/main/feeds/luci/0001-show-soc-status-on-luci.patch
         git am 0001-show-soc-status-on-luci.patch
-        cd $OPENWRT_PATH
-        wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/0001-test.patch
-        git am 0001-test.patch
 
     - name: 加载自定义配置
       run: |
