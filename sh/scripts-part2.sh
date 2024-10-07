@@ -59,7 +59,7 @@ git clone --depth 1 https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdn
 git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
 git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
 git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
-git clone --depth 1 -b test https://github.com/m0eak/homeproxy.git package/homeproxy
+git clone --depth 1 https://github.com/immortalwrt/homeproxy.git package/homeproxy
 git clone --depth 1 https://github.com/m0eak/openwrt_patch.git ./package/custom
 git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git package/luci-theme-design
 git clone --depth 1 https://github.com/xuanranran/luci-app-design-config.git package/luci-app-design-config
