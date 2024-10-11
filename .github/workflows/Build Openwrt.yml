@@ -32,7 +32,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_AXT: https://github.com/m0eak/immortalwrt-ipq.git
+  REPO_URL_AXT: https://github.com/m0eak/openwrt-6.x.git
   REPO_URL_X86: https://github.com/openwrt/openwrt.git
   REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
   REPO_BRANCH: main
