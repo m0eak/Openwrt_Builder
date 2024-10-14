@@ -17,7 +17,7 @@ on:
       kernel:
         description: 'Kernel-AXT1800'
         required: false
-        default: 'k6.6.54'
+        default: 'k6.6.56'
       tag:
         description: 'Openwrt版本'
         required: false
