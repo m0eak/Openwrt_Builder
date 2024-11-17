@@ -98,10 +98,10 @@ jobs:
         fi
         if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
           REPO_URL=$REPO_URL_IMM
-          git clone $REPO_URL openwrt
+          git clone $REPO_URL -b openwrt-24.10 --single-branch openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt
-          git checkout ${{ github.event.inputs.tag2 }}
+          #git checkout ${{ github.event.inputs.tag2 }}
         fi
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
