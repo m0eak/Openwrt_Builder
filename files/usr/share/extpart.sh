@@ -11,7 +11,7 @@ else
     exit 1
 fi
 
-if [ "$( apk list --installed 2>/dev/null| grep -c "block-mount")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "e2fsprogs")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "kmod-usb-storage")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "kmod-fs-vfat")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "block-mount")" -ne '0' ] && [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "e2fsprogs")" -ne '0' ] && [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "kmod-usb-storage")" -ne '0' ] && [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "kmod-fs-vfat")" -ne '0' ];then
   echo "依赖检测完毕"
 else
   echo "缺失依赖，请先安装block-mount  kmod-usb-storage  kmod-fs-ext4 e2fsprogs kmod-fs-vfat"
