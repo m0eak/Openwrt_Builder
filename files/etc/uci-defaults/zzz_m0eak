@@ -1,15 +1,25 @@
 #!/bin/sh
+if [ -x "$(command -v opkg)" ]; then
+    PACKAGE_MANAGER="opkg list-installed"
+    echo "opkg包管理器。" >&2
+elif [ -x "$(command -v apk)" ]; then
+    PACKAGE_MANAGER="apk list --installed"
+    echo "apk包管理器。" >&2
+else
+    echo "无法找到有效的包管理器。" >&2
+    exit 1
+fi
 VERSION=replace
 touch /etc/crontabs/root
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
-until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
+until [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
   sleep 1
 done
 if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
   sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.enabled='1'
   uci set mosdns.config.redirect='0'
   uci set mosdns.config.custom_local_dns='1'
@@ -24,7 +34,7 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci commit mosdns
   /etc/init.d/mosdns restart
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
   uci set aria2.main.user='root'
   uci set aria2.main.config_dir='/etc/aria2'
   uci set aria2.main.log='/etc/aria2/log'
@@ -34,21 +44,15 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
   uci commit aria2
   /etc/init.d/aria2 restart
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
   uci set dhcp.@dnsmasq[0].cachesize='0'
   uci commit dhcp
   /etc/init.d/dnsmasq restart
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^cpufreq")" -ne '0' ];then
-uci set cpufreq.cpufreq.governor0='ondemand'
-uci set cpufreq.cpufreq.sdfactor0='10'
-uci set cpufreq.cpufreq.upthreshold0='50'
-uci set cpufreq.cpufreq.minfreq0='864000'
-uci set cpufreq.cpufreq.maxfreq0='1800000'
-uci commit cpufreq
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^cpufreq")" -ne '0' ];then
 /etc/init.d/cpufreq restart
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$(uci -q get smartdns.@server[0].name)" = "清华大学TUNA协会" ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$(uci -q get smartdns.@server[0].name)" = "清华大学TUNA协会" ];then
   uci set smartdns.@smartdns[0].prefetch_domain='1'
   uci set smartdns.@smartdns[0].port='6053'
   uci set smartdns.@smartdns[0].seconddns_port='5335'
@@ -259,7 +263,7 @@ sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
-if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
   uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
   uci set fancontrol.settings.start_speed='55'
@@ -270,65 +274,17 @@ if [ "$( opkg list-installed 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '
   echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
 uci commit
-if [ "$(grep -c "aarch64_cortex-a53" /etc/openwrt_release)" -eq '1' ];then
-  echo "# add your custom package feeds here" > /etc/opkg/customfeeds.conf
-  echo "#" >> /etc/opkg/customfeeds.conf
-  echo "# src/gz example_feed_name http://www.example.com/path/to/files" >> /etc/opkg/customfeeds.conf
-  echo "src/gz m0eak_packages https://package.m0eak.cc/packages/aarch64_cortex-a53/packages" >> /etc/opkg/customfeeds.conf
-  echo "src/gz is_nas https://istore.linkease.com/repo/aarch64_cortex-a53/nas" >> /etc/opkg/customfeeds.conf
-  echo "src/gz is_nas_luci https://istore.linkease.com/repo/all/nas_luci" >> /etc/opkg/customfeeds.conf
-  echo "src/gz is_store https://istore.linkease.com/repo/all/store/" >> /etc/opkg/customfeeds.conf
-  if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
-    echo "src/gz openwrt_core https://mirror.nju.edu.cn/immortalwrt/snapshots/targets/qualcommax/ipq807x/kmods/6.6.36-1-26768f9df0f6231779971745d5152147" >> /etc/opkg/customfeeds.conf
-    echo "src/gz openwrt_base https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/base/" > /etc/opkg/distfeeds.conf
-    echo "src/gz openwrt_luci https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/luci/" >> /etc/opkg/distfeeds.conf
-    echo "src/gz openwrt_packages https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/packages" >> /etc/opkg/distfeeds.conf
-    echo "src/gz openwrt_routing https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/routing" >> /etc/opkg/distfeeds.conf
-    echo "src/gz openwrt_telephony https://mirror.nju.edu.cn/immortalwrt/snapshots/packages/aarch64_cortex-a53/telephony" >> /etc/opkg/distfeeds.conf
-  fi
-fi
-if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "ImmortalWrt" /etc/openwrt_release)" -ne '0' ];then
-  cat <<EOL > /etc/opkg/distfeeds.conf
-src/gz immortalwrt_core https://mirrors.vsean.net/openwrt/releases/$VERSION/targets/x86/64/packages
-src/gz immortalwrt_base https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/base
-src/gz immortalwrt_luci https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/luci
-src/gz immortalwrt_packages https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/packages
-src/gz immortalwrt_routing https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/routing
-src/gz immortalwrt_telephony https://mirrors.vsean.net/openwrt/releases/$VERSION/packages/x86_64/telephony
-EOL
-fi
-if [ "$(grep -c "x86_64" /etc/openwrt_release)" -eq '1' ] && [ "$(grep -c "OpenWrt" /etc/openwrt_release)" -ne '0' ];then
-  cat <<EOL > /etc/opkg/distfeeds.conf
-src/gz openwrt_core https://downloads.openwrt.org/releases/$VERSION/targets/x86/64/packages
-src/gz openwrt_base https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/base
-src/gz openwrt_luci https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/luci
-src/gz openwrt_packages https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/packages
-src/gz openwrt_routing https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/routing
-src/gz openwrt_telephony https://downloads.openwrt.org/releases/$VERSION/packages/x86_64/telephony
-EOL
-fi
 if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
   cat <<EOL > /etc/rc.local
 # Put your custom commands here that should be executed once
 # the system init finished. By default this file does nothing.
 sysctl -w dev.nss.clock.auto_scale=1
-sleep 5s
-uci set wireless.radio2.country='AU'
-uci commit wireless
-uci set cpufreq.cpufreq.governor0='ondemand'
-uci set cpufreq.cpufreq.sdfactor0='10'
-uci set cpufreq.cpufreq.upthreshold0='50'
-uci set cpufreq.cpufreq.minfreq0='864000'
-uci set cpufreq.cpufreq.maxfreq0='1800000'
-uci commit cpufreq
-/etc/init.d/cpufreq restart
-EOL
 fi
 if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
   echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
   /etc/init.d/network restart
 fi
-if [ "$( opkg list-installed 2>/dev/null| grep -c "turboacc")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "turboacc")" -ne '0' ];then
   uci set turboacc.config.fullcone_nat6='0'
   uci set turboacc.config.bbr_cca='0'
   uci set turboacc.config.sw_flow='0'
@@ -337,7 +293,7 @@ fi
 
 need_restart=0
 
-if [ "$( opkg list-installed 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
 fi
 if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
@@ -346,11 +302,11 @@ fi
 if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
   echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
-if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
+if [ "$($PACKAGE_MANAGER 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
   sed -i 's/services/vpn/g' /usr/share/luci/menu.d/luci-app-tailscale.json && rm -rf luci-indexcache.*.json
   need_restart=1
 fi
-if [ "$(opkg list-installed 2>/dev/null | grep -c "luci-app-ttyd")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-ttyd.json | grep -c "services")" -ne '0' ]; then
+if [ "$($PACKAGE_MANAGER 2>/dev/null | grep -c "luci-app-ttyd")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-ttyd.json | grep -c "services")" -ne '0' ]; then
   sed -i 's/services/system/g' /usr/share/luci/menu.d/luci-app-ttyd.json && rm -rf luci-indexcache.*.json
   need_restart=1
 fi
