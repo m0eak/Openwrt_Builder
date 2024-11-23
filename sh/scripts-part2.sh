@@ -11,55 +11,41 @@
 #
 
 # Modify default IP
-find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
-find ./ | grep Makefile | grep mosdns | xargs rm -f
-find ./ | grep Makefile | grep openclash | xargs rm -f
-find ./ | grep Makefile | grep ddns-go | xargs rm -f
-find ./ | grep Makefile | grep homeproxy | xargs rm -f
-find ./ | grep Makefile | grep wolplus | xargs rm -f
-find ./ | grep Makefile | grep luci-theme-design | xargs rm -f
-find ./ | grep Makefile | grep design-config | xargs rm -f
-if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
-  sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
-  sed -i 's/'OpenWrt'/'GL-AXT1800'/g' ./package/base-files/files/bin/config_generate
-  find ./ | grep Makefile | grep app-store | xargs rm -f
-  find ./ | grep Makefile | grep linkease | xargs rm -f
-  find ./ | grep Makefile | grep linkmount | xargs rm -f
-  find ./ | grep Makefile | grep quickstart | xargs rm -f
-  find ./ | grep Makefile | grep turboacc | xargs rm -f
-  find ./ | grep Makefile | grep unishare | xargs rm -f
-  find ./ | grep Makefile | grep webdav2 | xargs rm -f
-  git clone --depth 1 https://github.com/linkease/istore.git package/istore
-  git clone --depth 1 https://github.com/linkease/nas-packages-luci.git package/nas-packages-luci
-  git clone --depth 1 https://github.com/linkease/nas-packages.git package/nas-packages
-  git clone --depth 1 https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
-  git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
-#  # sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
-#  echo "axt1800 part-2"
-#fi
-if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
-  # find ./ | grep Makefile | grep turboacc | xargs rm -f
-  # git clone --depth 1 https://github.com/chenmozhijin/turboacc.git package/turboacc
-  sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
-  echo "immortalwrt part-2"
-  rm -rf feeds/packages/lang/golang
-  git clone https://github.com/sbwml/packages_lang_golang -b 22.x feeds/packages/lang/golang
+
+TARGET_DIR="$PWD/package"
+if [ ! -d "$PWD/package" ]; then
+    echo -e "$home 目录下未找到 源码仓库，请确保源码仓库在目录下，请善用 mv 命令移动源码仓库$"
+    exit 1
 fi
-if [ "$(grep -c "Openwrt" $GITHUB_OUTPUT)" -eq '1' ];then
-  sed -i 's/192.168.1.1/192.168.100.100/g' package/base-files/files/bin/config_generate
-  echo "Openwrt part-2"
-fi
-if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
-  sed -i 's/192.168.1.1/192.168.8.1/g' ./package/base-files/files/bin/config_generate
-  sed -i 's/'ImmortalWrt'/'GL-MT3000'/g' ./package/base-files/files/bin/config_generate
-  echo "MT3000 part-2"
-fi
-git clone --depth 1 https://github.com/animegasan/luci-app-wolplus.git package/luci-app-wolplus
-git clone --depth 1 https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
-git clone --depth 1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-git clone --depth 1 https://github.com/vernesong/OpenClash.git package/openclash
-git clone --depth 1 https://github.com/sirpdboy/luci-app-ddns-go.git package/ddns-go
-git clone --depth 1 https://github.com/immortalwrt/homeproxy.git package/homeproxy
-git clone --depth 1 https://github.com/m0eak/openwrt_patch.git ./package/custom
-# git clone -b js --depth 1 https://github.com/papagaye744/luci-theme-design.git package/luci-theme-design
-# git clone --depth 1 https://github.com/xuanranran/luci-app-design-config.git package/luci-app-design-config
+
+REPOS=(
+    "https://github.com/sbwml/luci-app-mosdns"
+    "https://github.com/chenmozhijin/turboacc"
+    "https://github.com/breeze303/luci-app-lucky"
+    "https://github.com/JiaY-Shi/fancontrol"
+    "https://github.com/animegasan/luci-app-wolplus"
+)
+update_or_clone_repo() {
+    repo_url=$1
+    repo_name=$(basename -s .git "$repo_url")
+    repo_dir="$TARGET_DIR/$repo_name"
+
+    ## echo -e "${GREEN}Processing $repo_name${NC}"
+
+    if [ ! -d "$repo_dir" ]; then
+        echo -e "${GREEN}Cloning $repo_name${NC}"
+        git clone --single-branch --depth 1 "$repo_url" "$repo_dir"
+    else
+        echo -e "${GREEN}Updating $repo_name${NC}"
+        cd "$repo_dir" || exit
+        git pull
+        cd - || exit
+    fi
+}
+
+for repo in "${REPOS[@]}"; do
+    update_or_clone_repo "$repo"
+done
+
+echo -e "${GREEN}All repositories are up to date.${NC}"
+
