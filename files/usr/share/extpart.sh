@@ -1,5 +1,23 @@
 #!/bin/sh
 
+if [ -x "$(command -v opkg)" ]; then
+    PACKAGE_MANAGER="opkg list-installed"
+    echo "opkg包管理器。" >&2
+elif [ -x "$(command -v apk)" ]; then
+    PACKAGE_MANAGER="apk list --installed"
+    echo "apk包管理器。" >&2
+else
+    echo "无法找到有效的包管理器。" >&2
+    exit 1
+fi
+
+if [ "$( apk list --installed 2>/dev/null| grep -c "block-mount")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "e2fsprogs")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "kmod-usb-storage")" -ne '0' ] && [ "$( apk list --installed 2>/dev/null| grep -c "kmod-fs-vfat")" -ne '0' ];then
+  echo "依赖检测完毕"
+else
+  echo "缺失依赖，请先安装block-mount  kmod-usb-storage  kmod-fs-ext4 e2fsprogs kmod-fs-vfat"
+  exit 1
+fi
+
 # 列出现有分区
 echo "现有的分区如下："
 blkid /dev/mmcblk0* || blkid /dev/sd*
@@ -53,4 +71,4 @@ uci set fstab.@mount[0].enabled='1'
 uci commit fstab
 
 # 重启系统
-reboot
+reboot && echo "重启中"
