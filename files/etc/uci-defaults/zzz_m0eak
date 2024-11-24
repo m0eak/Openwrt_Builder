@@ -294,7 +294,7 @@ fi
 need_restart=0
 
 if [ -e /sbin/cpuusage ];then
-  sed -i 's/HWE:/NSS:/' /sbin/cpuusage
+  sed -i 's/HWE:/NPU:/' /sbin/cpuusage
 fi
 
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
