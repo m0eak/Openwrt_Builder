@@ -1,0 +1,264 @@
+name: Build immortalwrt
+
+on:
+  #schedule:
+    #- cron: '0 16 * * *'
+  repository_dispatch:
+  workflow_dispatch:
+    inputs:
+      istore:
+        description: 'istore'
+        required: false
+        default: 'true'
+      docker:
+        description: '是否编译docker'
+        required: false
+        default: 'false'
+      kernel:
+        description: 'Kernel-AXT1800'
+        required: false
+        default: 'k6.6.61'
+      tag:
+        description: 'Openwrt版本'
+        required: false
+        default: 'v23.05.4'
+      tag2:
+        description: 'ImmortalWrt版本'
+        required: false
+        default: 'v23.05.4'
+      ssh:
+        description: 'SSH 连接到 Actions'
+        required: false
+        default: 'false'
+
+env:
+  REPO_URL_AXT: https://github.com/m0eak/immortalwrt-ipq.git
+  REPO_URL_X86: https://github.com/openwrt/openwrt.git
+  REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
+  REPO_BRANCH: main
+  FEEDS_CONF: feeds.conf.default
+  CONFIG_FILE_AXT: ./config/axt1800.config
+  CONFIG_FILE_X86: ./config/openwrt-x86_64.config
+  CONFIG_FILE_IMM: ./config/immortalwrt.config
+  CONFIG_FILE_DOCKER: ./config/docker.config
+  CONFIG_FILE_ISTORE: ./config/istore.config
+  DIY_P1_SH: ./sh/scripts-part1.sh
+  DIY_P2_SH: ./sh/scripts-part2.sh
+  UPLOAD_BIN_DIR: true
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        target: [x86-immortalwrt]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@main
+
+    - name: 初始化环境
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo -E apt-get -qq update
+        sudo -E apt-get -qq install $(curl -fsSL git.io/depends-ubuntu-2004)
+        sudo -E apt-get -qq autoremove --purge
+        sudo -E apt-get -qq clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+        echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" >> $GITHUB_ENV
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_ENV
+        echo "TAG=${{ github.event.inputs.tag }}" | tr ' ' '_' >> $GITHUB_ENV
+        echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
+
+
+    - name: 克隆源代码
+      working-directory: /workdir
+      run: |
+        df -hT $PWD
+        if [[ "${{ matrix.target }}" == "AXT-1800" ]]; then
+          REPO_URL=$REPO_URL_AXT
+          git clone --branch $REPO_BRANCH $REPO_URL openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          cd openwrt 
+          git checkout ${{ github.event.inputs.kernel }}
+        fi
+        if [[ "${{ matrix.target }}" == "x86-Openwrt" ]]; then
+          REPO_URL=$REPO_URL_X86
+          git clone $REPO_URL -b $REPO_BRANCH openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          cd openwrt
+          git checkout ${{ github.event.inputs.tag }}
+        fi
+        if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
+          REPO_URL=$REPO_URL_IMM
+          git clone $REPO_URL -b openwrt-24.10 --single-branch openwrt
+          ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+          cd openwrt
+          #git checkout ${{ github.event.inputs.tag2 }}
+        fi
+        echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+
+    - name: 加载自定义源
+      run: |
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "KERNEL_NAME=${{ github.event.inputs.kernel }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "当前 Kernel 版本：$KERNEL_NAME"
+        cat $GITHUB_OUTPUT
+        cat $GITHUB_ENV
+        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
+        chmod +x $DIY_P1_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P1_SH
+
+    - name: 更新源
+      run: cd openwrt && ./scripts/feeds update -a
+
+    - name: 安装源
+      run: cd openwrt && ./scripts/feeds install -a
+
+    - name: 加载自定义配置
+      run: |
+        echo "WORKFLOW_NAME=${{ matrix.target }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
+        [ -e files ] && mv ./files openwrt/files
+        if [[ ${{ matrix.target }} == 'AXT-1800' ]]; then
+          if [[ ${{ github.event.inputs.docker }} == 'true' ]]; then
+            echo "加载自定义 docker 配置..."
+            [ -e $CONFIG_FILE_AXT ] && cp $CONFIG_FILE_AXT openwrt/.config
+            [ -e $CONFIG_FILE_DOCKER ] && cat $CONFIG_FILE_DOCKER >> openwrt/.config
+          else
+            echo "加载自定义配置..."
+            [ -e $CONFIG_FILE_AXT ] && mv $CONFIG_FILE_AXT openwrt/.config
+          fi
+          if [[ ${{ github.event.inputs.istore }} == 'true' ]]; then
+            echo "加载自定义 istore 配置..."
+            [ -e $CONFIG_FILE_ISTORE ] && cat $CONFIG_FILE_ISTORE >> openwrt/.config
+          fi
+        fi
+        if [[ ${{ matrix.target }} == 'x86-Openwrt' ]]; then
+          [ -e $CONFIG_FILE_X86 ] && mv $CONFIG_FILE_X86 openwrt/.config
+        fi
+        if [[ ${{ matrix.target }} == 'x86-immortalwrt' ]]; then
+          [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
+        fi
+        chmod +x $DIY_P2_SH
+        cd openwrt
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        make defconfig
+
+    - name: SSH 连接到 Actions
+      uses: P3TERX/ssh2actions@v1.0.0
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
+      env:
+        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+
+    # - name: 下载软件包
+    #   id: package
+    #   run: |
+    #     cd openwrt
+    #     make download -j8
+    #     find dl -size -1024c -exec ls -l {} \;
+    #     find dl -size -1024c -exec rm -f {} \;
+
+    - name: 编译固件
+      id: compile
+      run: |
+        cd openwrt
+        echo -e "$(nproc) 线程编译"
+        echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
+        echo "compile-status=success" >> $GITHUB_ENV
+        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
+        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
+        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        echo "compile=success" >> $GITHUB_OUTPUT
+        if [ -s DEVICE_NAME ]; then
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+        fi
+        echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+
+    - name: 检查空间使用情况
+      if: (!cancelled())
+      run: df -hT
+
+    - name: 上传 bin 目录
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      with:
+        name: OpenWrt_bin_${{ steps.compile.outputs.device-name }}_${{ steps.compile.outputs.file-date }}
+        path: openwrt/bin
+
+    - name: 整理文件
+      id: organize
+      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_ENV
+        echo "organize=success" >> $GITHUB_OUTPUT
+        cat $GITHUB_ENV
+
+    - name: 上传固件目录
+      uses: actions/upload-artifact@main
+      if: steps.organize.outputs.organize == 'success' && !cancelled()
+      with:
+        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        path: ${{ env.FIRMWARE }}
+
+    - name: 生成发布标签
+      id: tag
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
+      run: |
+        if [[ "${{ matrix.target }}" == "AXT-1800" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-${KERNEL_NAME#k}-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
+        if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-$TAG2-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
+        if [[ "${{ matrix.target }}" == "x86-Openwrt" ]]; then
+          echo "生成发布标签..."
+          echo "release_tag=$WORKFLOW_NAME-$TAG-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          touch release.txt
+          echo "tag=success" >> $GITHUB_OUTPUT
+        fi
+
+    - name: 发布固件
+      uses: softprops/action-gh-release@v1
+      if: steps.tag.outputs.tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.release_tag }}
+        body_path: release.txt
+        files: ${{ env.FIRMWARE }}/*
+
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      with:
+        retain_days: 5
+        keep_minimum_runs: 5
+  
+    - name: Remove old Releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      with:
+        keep_latest: 10
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  
