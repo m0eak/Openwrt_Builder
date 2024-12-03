@@ -98,7 +98,7 @@ jobs:
         fi
         if [[ "${{ matrix.target }}" == "x86-immortalwrt" ]]; then
           REPO_URL=$REPO_URL_IMM
-          git clone $REPO_URL -b openwrt-24.10 --single-branch openwrt
+          git clone $REPO_URL --single-branch openwrt
           ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
           cd openwrt
           #git checkout ${{ github.event.inputs.tag2 }}
