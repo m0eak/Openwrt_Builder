@@ -31,6 +31,9 @@ update_or_clone_repo() {
     repo_name=$(basename -s .git "$repo_url")
     repo_dir="$TARGET_DIR/$repo_name"
 
+    # 删除对应的 Makefile
+    find ./ -name "Makefile" | grep "$repo_name" | xargs rm -f
+    
     if [ ! -d "$repo_dir" ]; then
         echo -e "${GREEN}Cloning $repo_name${NC}"
         git clone --single-branch --depth 1 "$repo_url" "$repo_dir"
@@ -41,8 +44,6 @@ update_or_clone_repo() {
         cd - || exit
     fi
 
-    # 删除对应的 Makefile
-    find ./ -name "Makefile" | grep "$repo_name" | xargs rm -f
 }
 
 for repo in "${REPOS[@]}"; do
