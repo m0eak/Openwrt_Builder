@@ -11,6 +11,10 @@
 #
 
 # Modify default IP
+find ./ | grep Makefile | grep mosdns | xargs rm -f
+find ./ | grep Makefile | grep turboacc | xargs rm -f
+find ./ | grep Makefile | grep luci-app-lucky | xargs rm -f
+find ./ | grep Makefile | grep luci-app-wolplus | xargs rm -f
 
 TARGET_DIR="$PWD/package"
 if [ ! -d "$PWD/package" ]; then
