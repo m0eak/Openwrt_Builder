@@ -279,6 +279,7 @@ if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
 # Put your custom commands here that should be executed once
 # the system init finished. By default this file does nothing.
 sysctl -w dev.nss.clock.auto_scale=1
+EOL
 fi
 if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
   echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
