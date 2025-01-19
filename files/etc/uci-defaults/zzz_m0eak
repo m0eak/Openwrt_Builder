@@ -10,12 +10,15 @@ else
     exit 1
 fi
 VERSION=replace
-touch /etc/crontabs/root
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
 until [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
   sleep 1
 done
+if [ "$(grep -c "x86_64" /etc/openwrt_release)" -ne '0' ];then
+  uci set network.lan.ipaddr="192.168.100.1"
+  uci commit network
+fi
 if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
   sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 fi
@@ -275,6 +278,7 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' 
 fi
 uci commit
 if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
+  touch /etc/crontabs/root
   cat <<EOL > /etc/rc.local
 # Put your custom commands here that should be executed once
 # the system init finished. By default this file does nothing.
@@ -324,3 +328,4 @@ if [ "$need_restart" -eq '1' ]; then
   /etc/init.d/rpcd restart
 fi
 exit 0
+
