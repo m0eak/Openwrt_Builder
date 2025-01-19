@@ -11,7 +11,9 @@
 #
 
 # Modify default IP
-find ./ | grep Makefile | grep mosdns | xargs rm -f
+# 排除 $PWD/package 目录及其子目录下的 Makefile
+find . -type f -name "Makefile" ! -path "$PWD/package*" | grep mosdns | xargs rm -f
+
 TARGET_DIR="$PWD/package"
 if [ ! -d "$TARGET_DIR" ]; then
     echo -e "$home 目录下未找到 源码仓库，请确保源码仓库在目录下，请善用 mv 命令移动源码仓库$"
@@ -31,9 +33,9 @@ update_or_clone_repo() {
     repo_name=$(basename -s .git "$repo_url")
     repo_dir="$TARGET_DIR/$repo_name"
 
-    # 删除对应的 Makefile
-    find ./ -name "Makefile" | grep "$repo_name" | xargs rm -f
-    
+    # 排除 $PWD/package 目录及其子目录下的 Makefile
+    find . -type f -name "Makefile" ! -path "$PWD/package*" | grep "$repo_name" | xargs rm -f
+
     if [ ! -d "$repo_dir" ]; then
         echo -e "${GREEN}Cloning $repo_name${NC}"
         git clone --single-branch --depth 1 "$repo_url" "$repo_dir"
@@ -51,5 +53,3 @@ for repo in "${REPOS[@]}"; do
 done
 
 echo -e "${GREEN}All repositories are up to date.${NC}"
-
-
