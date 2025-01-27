@@ -80,7 +80,7 @@ jobs:
         git clone $REPO_URL --single-branch openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        git checkout ${{ github.event.inputs.tag2 }}
+        git checkout $TAG2
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 加载自定义源
