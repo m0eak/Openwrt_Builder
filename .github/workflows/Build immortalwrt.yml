@@ -132,9 +132,9 @@ jobs:
       id: package
       run: |
          cd openwrt
-         make download -j8
-         find dl -size -1024c -exec ls -l {} \;
-         find dl -size -1024c -exec rm -f {} \;
+         # make download -j8
+         # find dl -size -1024c -exec ls -l {} \;
+         # find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
       id: compile
@@ -201,15 +201,14 @@ jobs:
         echo "tag=success" >> $GITHUB_OUTPUT
         echo "生成的发布标签: $RELEASE_TAG"
 
-    - name: 发布固件
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.tag && steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release Firmware
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ env.release_tag }}
-        body_path: release.txt
+        tag_name: immortalwrt_x86_64_${{env.tag2}}_${{env.DATE_SUFFIX}}
         files: ${{ env.FIRMWARE }}/*
+        body: |
+          源码：${{env.REPO_URL_IMM}}
+          分支：${{env.tag2}}
 
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
