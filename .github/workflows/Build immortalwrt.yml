@@ -204,7 +204,7 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: immortalwrt_x86_64_${{env.tag2}}_${{env.DATE_SUFFIX}}
+        tag_name: immortalwrt_x86_64${{env.RELEASE_TAG}}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{env.REPO_URL_IMM}}
