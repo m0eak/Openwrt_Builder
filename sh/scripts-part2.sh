@@ -35,10 +35,12 @@ REPOS=(
     ["https://github.com/0x676e67/luci-theme-design"]="js"  # 指定 js 分支
 )
 
-# 提取仓库名称列表
+# 提取仓库名称列表，去掉 "luci-app-" 前缀
 declare -a repo_names
 for repo_url in "${!REPOS[@]}"; do
-    repo_names+=("$(basename -s .git "$repo_url")")
+    repo_name=$(basename -s .git "$repo_url")
+    repo_name=${repo_name#luci-app-} # 去掉 "luci-app-" 前缀
+    repo_names+=("$repo_name")
 done
 
 # 删除所有符合条件的 Makefile
@@ -47,6 +49,7 @@ find . -type f -name "Makefile" ! -path "$PWD/package*" |
 while IFS= read -r file; do
   for repo_name in "${repo_names[@]}"; do
     if [[ "$file" == *"$repo_name"* ]]; then
+      echo "现有的reponame:$repo_name"
       echo "删除 Makefile: $file"
       rm -f "$file"
       break # 找到匹配的仓库名称，跳出内层循环
@@ -54,7 +57,6 @@ while IFS= read -r file; do
   done
 done
 echo "Makefile 清理完成"
-
 
 update_or_clone_repo() {
     local repo_url=$1
