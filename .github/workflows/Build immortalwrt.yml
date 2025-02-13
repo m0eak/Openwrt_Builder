@@ -204,11 +204,10 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: immortalwrt_x86_64$(date +"%Y%m%d-%H%M")
+        tag_name: immortalwrt_x86_64-${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
-          分支：${{ env.tag2 }}
 
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
