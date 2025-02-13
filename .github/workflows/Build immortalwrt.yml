@@ -185,10 +185,10 @@ jobs:
       id: tag
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
-          echo "生成发布标签..."
-          echo "release_tag=$WORKFLOW_NAME-$TAG2-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-          touch release.txt
-          echo "tag=success" >> $GITHUB_OUTPUT
+        echo "生成发布标签..."
+        echo "release_tag=$WORKFLOW_NAME-$TAG2-$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+        touch release.txt
+        echo "tag=success" >> $GITHUB_OUTPUT
 
     - name: 发布固件
       uses: softprops/action-gh-release@v1
