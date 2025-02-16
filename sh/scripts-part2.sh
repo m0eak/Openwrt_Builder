@@ -71,4 +71,10 @@ for repo in "${!REPOS[@]}"; do
 done
 
 echo "所有仓库克隆完成"
-cd $TARGET_DIR/turboacc/luci-app* && ls -la 
+cd $TARGET_DIR/turboacc/luci-app*
+if [ "$(ls -la | grep -c "Makefile")" -eq '0' ]; then
+    echo "未找到 Makefile，终止 GitHub Action"
+    exit 1
+else
+    echo "找到 Makefile，继续执行"
+fi
