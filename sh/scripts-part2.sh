@@ -99,3 +99,5 @@ for repo in "${!REPOS[@]}"; do
 done
 
 echo -e "${GREEN}All repositories are up to date.${NC}"
+
+cd $TARGET_DIR && ls -la
