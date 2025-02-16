@@ -100,4 +100,4 @@ done
 
 echo -e "${GREEN}All repositories are up to date.${NC}"
 
-cd $TARGET_DIR && ls -la
+cd $TARGET_DIR/turboacc/luci-app* && ls -la 
