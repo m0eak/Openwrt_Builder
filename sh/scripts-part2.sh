@@ -45,7 +45,7 @@ done
 
 # 删除所有符合条件的 Makefile
 echo "开始查找并删除符合条件的 Makefile"
-find . -type f -name "Makefile" ! -path "$PWD/package*" |
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" |
 while IFS= read -r file; do
   for repo_name in "${repo_names[@]}"; do
     if [[ "$file" == *"$repo_name"* ]]; then
@@ -80,13 +80,6 @@ update_or_clone_repo() {
     else
         echo -e "${GREEN}Updating $repo_name${NC}"
         cd "$repo_dir" || exit
-        echo "执行 git restore ."
-        git restore .
-        if [ $? -eq 0 ]; then
-          echo "仓库 $repo_name Makefile 恢复完成"
-        else
-          echo "仓库 $repo_name Makefile 恢复失败"
-        fi
         echo "执行 git pull"
         git pull
         if [ $? -eq 0 ]; then
