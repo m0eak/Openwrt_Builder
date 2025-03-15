@@ -8,47 +8,67 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build MT-3000-23.05
+name: Build mt3000
 
 on:
-#  schedule:
-#    - cron: '0 16 * * 1'
+  #schedule:
+    #- cron: '0 16 * * *'
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      branch:
-        description: '选择分支'
-        required: true
-        default: '23.05.2'
+      istore:
+        description: 'istore'
+        required: false
+        default: 'false'
       ssh:
-        description: 'SSH connection to Actions'
+        description: 'SSH 连接到 Actions'
         required: false
         default: 'false'
 
 env:
-  REPO_URL: https://github.com/padavanonly/immortalwrt-mt798x-23.05.git
-  REPO_BRANCH: openwrt-23.05
+  REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-23.05.git
+  REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: ./config/mt3000.config
+  CONFIG_FILE_IMM: ./config/mt3000.config
+  CONFIG_FILE_DOCKER: ./config/docker.config
+  CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
-  UPLOAD_COWTRANSFER: false
-  UPLOAD_WETRANSFER: false
   UPLOAD_RELEASE: true
   TZ: Asia/Shanghai
-  TAG: ${{ github.event.inputs.branch }}
 
 jobs:
   build:
     runs-on: ubuntu-20.04
-
     steps:
     - name: Checkout
       uses: actions/checkout@main
 
-    - name: Initialization environment
+    - name: "Optimize Disk Space"
+      uses: "hugoalh/disk-space-optimizer-ghaction@v0.8.1"
+      with:
+        operate_sudo: "True"
+        general_include: ".+"
+        general_exclude: |-
+          ^GCC$
+          ^G\+\+$
+          Clang
+          LLVM
+        docker_include: ".+"
+        docker_prune: "True"
+        docker_clean: "True"
+        apt_prune: "True"
+        apt_clean: "True"
+        homebrew_prune: "True"
+        homebrew_clean: "True"
+        npm_prune: "True"
+        npm_clean: "True"
+        os_swap: "True"
+
+
+    - name: 初始化环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
@@ -60,137 +80,140 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
+        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
-    - name: Clone source code
+
+    - name: 克隆源代码
       working-directory: /workdir
       run: |
         df -hT $PWD
-        git clone $REPO_URL -b $REPO_BRANCH openwrt
+        REPO_URL=$REPO_URL_IMM
+        git clone $REPO_URL --single-branch openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
-
-    - name: Load custom feeds
+        cd openwrt
+        echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
+        
+    - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
-        echo "WORKFLOW_NAME is $WORKFLOW_NAME"
+        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
+        cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
-        git checkout $TAG
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: Update feeds
+    - name: 更新源
       run: cd openwrt && ./scripts/feeds update -a
 
-    - name: Install feeds
+    - name: 安装源
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: Load custom configuration
+    - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=${{ github.workflow }}" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        cat $GITHUB_OUTPUT
         [ -e files ] && mv ./files openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
-    - name: SSH connection to Actions
+    - name: SSH 连接到 Actions
       uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh  != 'false') || contains(github.event.action, 'ssh')
+      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
-    - name: Download package
+    - name: 下载软件包
       id: package
       run: |
-        cd openwrt
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
+         cd openwrt
+         make download -j8
+         find dl -size -1024c -exec ls -l {} \;
+         find dl -size -1024c -exec rm -f {} \;
 
-    - name: Compile the firmware
+    - name: 编译固件
       id: compile
       run: |
         cd openwrt
-        echo -e "$(nproc) thread compile"
+        echo -e "$(nproc) 线程编译"
         echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
-        echo "::set-output name=status::success"
+        echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
         echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+        echo "compile=success" >> $GITHUB_OUTPUT
+        if [ -s DEVICE_NAME ]; then
+          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
+        fi
+        echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
 
-    - name: Check space usage
+    - name: 检查空间使用情况
       if: (!cancelled())
       run: df -hT
 
-    - name: Upload bin directory
+    - name: 上传 bin 目录
       uses: actions/upload-artifact@main
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
       with:
-        name: OpenWrt_bin${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
+        name: OpenWrt_bin_${{ steps.compile.outputs.device-name }}_${{ steps.compile.outputs.file-date }}
         path: openwrt/bin
 
-    - name: Organize files
+    - name: 整理文件
       id: organize
       if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
         echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "::set-output name=status::success"
+        echo "status=success" >> $GITHUB_ENV
+        echo "organize=success" >> $GITHUB_OUTPUT
+        cat $GITHUB_ENV
 
-    - name: Upload firmware directory
+    - name: 上传固件目录
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.status == 'success' && !cancelled()
+      if: steps.organize.outputs.organize == 'success' && !cancelled()
       with:
         name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
         path: ${{ env.FIRMWARE }}
 
-    - name: Upload firmware to cowtransfer
-      id: cowtransfer
-      if: steps.organize.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
-        echo "::warning file=cowtransfer.com::$(cat cowtransfer.log | grep https)"
-        echo "::set-output name=url::$(cat cowtransfer.log | grep https | cut -f3 -d" ")"
-
-    - name: Upload firmware to WeTransfer
-      id: wetransfer
-      if: steps.organize.outputs.status == 'success' && env.UPLOAD_WETRANSFER == 'true' && !cancelled()
-      run: |
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
-        echo "::warning file=wetransfer.com::$(cat wetransfer.log | grep https)"
-        echo "::set-output name=url::$(cat wetransfer.log | grep https | cut -f3 -d" ")"
-
-    - name: Generate release tag
+    - name: 生成发布标签
       id: tag
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
-        echo "::set-output name=release_tag::mt3000-23.05.2$(date +"%Y.%m.%d-%H%M")"
+        echo "生成发布标签..."
+        CLEANED_WORKFLOW_NAME=$(echo "$WORKFLOW_NAME" | tr -c '[:alnum:]_' '-')
+        CLEANED_TAG2=$(echo "$TAG2" | tr -c '[:alnum:].-' '-')
+        BASE_TAG="${CLEANED_WORKFLOW_NAME}-${CLEANED_TAG2}"
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="${BASE_TAG}-${DATE_SUFFIX}"
+        if [ -z "$RELEASE_TAG" ]; then
+            echo "错误：生成的发布标签为空。请检查输入参数和工作流程名称。"
+            exit 1
+        fi
+        echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
         touch release.txt
-        [ $UPLOAD_COWTRANSFER = true ] && echo "🔗 [Cowtransfer](${{ steps.cowtransfer.outputs.url }})" >> release.txt
-        [ $UPLOAD_WETRANSFER = true ] && echo "🔗 [WeTransfer](${{ steps.wetransfer.outputs.url }})" >> release.txt
-        echo "::set-output name=status::success"
+        echo "tag=success" >> $GITHUB_OUTPUT
+        echo "生成的发布标签: $RELEASE_TAG"
 
-    - name: Upload firmware to release
-      uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success' && !cancelled()
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release Firmware
+      uses: softprops/action-gh-release@v2
       with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
-        body_path: release.txt
+        tag_name: immortalwrt_x86_64-${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
+        body: |
+          源码：${{ env.REPO_URL_IMM }}
 
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
       with:
-        retain_days: 1
-        keep_minimum_runs: 3
-
+        retain_days: 5
+        keep_minimum_runs: 5
+  
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@v0.1.0
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
@@ -199,3 +222,5 @@ jobs:
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  
+  
