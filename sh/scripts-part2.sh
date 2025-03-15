@@ -22,6 +22,7 @@ declare -A REPOS=(
     ["https://github.com/animegasan/luci-app-wolplus"]="" # 使用默认分支
     ["https://github.com/m0eak/luci-theme-asus"]="js"  # 指定 js 分支
     ["https://github.com/0x676e67/luci-theme-design"]="js"  # 指定 js 分支
+    ["https://github.com/nikkinikki-org/OpenWrt-nikki"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
