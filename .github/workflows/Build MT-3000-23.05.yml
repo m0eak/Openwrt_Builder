@@ -26,8 +26,8 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-23.05.git
-  REPO_BRANCH: main
+  REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
+  REPO_BRANCH: 24.10
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_IMM: ./config/mt3000.config
   CONFIG_FILE_DOCKER: ./config/docker.config
