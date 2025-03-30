@@ -114,7 +114,7 @@ jobs:
       run: |
         echo "WORKFLOW_NAME=MT-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
-        # [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
+        [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
         chmod +x $DIY_P2_SH
