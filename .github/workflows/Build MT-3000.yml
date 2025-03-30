@@ -82,7 +82,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
-        echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
     - name: 克隆源代码
