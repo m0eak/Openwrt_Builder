@@ -285,7 +285,7 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' 
 fi
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "MT3000" /etc/board.json)" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
-  uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
+  uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device0/cur_state'
   uci set fancontrol.settings.start_speed='100'
   uci set fancontrol.settings.start_temp='65'
   uci commit fancontrol
@@ -314,7 +314,7 @@ fi
 need_restart=0
 
 if [ -e /sbin/cpuusage ];then
-  sed -i 's/HWE:/NPU:/' /sbin/cpuusage
+  sed -i 's/HWE:/NSS:/' /sbin/cpuusage
 fi
 
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
