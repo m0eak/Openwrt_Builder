@@ -8,18 +8,18 @@ PKG_LICENSE_FILES:=LICENSE
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/default-settings
+define Package/m0eak-default-settings
   SECTION:=luci
   CATEGORY:=LuCI
   TITLE:=LuCI support for Default Settings
   PKGARCH:=all
   DEPENDS:=+luci-base +luci
-endef
 
 define Package/default-settings/description
-        LuCI support for Default Settings.
+  LuCI support for Default Settings.
 endef
 
+# This is a pure config package, no compilation needed
 define Build/Compile
 endef
 

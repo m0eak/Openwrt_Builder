@@ -34,6 +34,7 @@ env:
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
+  DEFAULT_SETTING: ./default-settings
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
@@ -114,6 +115,7 @@ jobs:
       run: |
         echo "WORKFLOW_NAME=MT-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
+        [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
         chmod +x $DIY_P2_SH
