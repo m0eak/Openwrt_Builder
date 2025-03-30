@@ -24,7 +24,7 @@ VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
 
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
-  wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq807x/kmods/" | grep -oP "$KERNEL-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
+  wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
   if [ ! -s ./vermagic ]; then
     echo "none"
   else
