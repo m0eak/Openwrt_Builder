@@ -24,7 +24,36 @@ VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
 
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
-  wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
+
+  # 定义kernel-6.6文件的路径
+  KERNEL_FILE="./include/kernel-6.6"
+
+  # 检查文件是否存在
+  if [ ! -f "$KERNEL_FILE" ]; then
+    echo "错误: 找不到文件 $KERNEL_FILE"
+    exit 1
+  fi
+
+  # 提取主版本号
+  MAJOR_VERSION=$(grep -oP 'LINUX_VERSION-\K[0-9.]+' "$KERNEL_FILE" | head -1)
+
+  # 提取小版本号
+  MINOR_VERSION=$(grep -oP 'LINUX_VERSION-[0-9.]+ = \K.[0-9]+' "$KERNEL_FILE" | head -1)
+
+  # 组合完整版本号
+  KERNEL_VERSION="${MAJOR_VERSION}${MINOR_VERSION}"
+
+  # 验证版本号格式
+  if [[ ! "$KERNEL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "错误: 无法提取有效的内核版本号"
+    exit 1
+  fi
+
+  # 输出结果
+  echo "提取的内核版本号: $KERNEL_VERSION"
+  echo "你可以通过 \$KERNEL_VERSION 变量使用这个值"
+
+  wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL_VERSION-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
   wget https://raw.githubusercontent.com/m0eak/openwrt_patch/refs/heads/main/gl-axt1800/9999-gl-axt1800-dts-change-cooling-level.patch 
   mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.6/9999-gl-axt1800-dts-change-cooling-level.patch 
   rm package/kernel/mac80211/patches/nss/ath11k/999-902-ath11k-fix-WDS-by-disabling-nwds.patch
