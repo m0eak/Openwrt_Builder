@@ -273,15 +273,23 @@ sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
-if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ];then
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
   uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
-  uci set fancontrol.settings.start_speed='55'
+  uci set fancontrol.settings.start_speed='100'
   uci set fancontrol.settings.start_temp='65'
   uci commit fancontrol
   /etc/init.d/fancontrol restart
   echo "0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
   echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
+fi
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "MT3000" /etc/board.json)" -ne '0' ];then
+  uci set fancontrol.settings.enabled='1'
+  uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
+  uci set fancontrol.settings.start_speed='100'
+  uci set fancontrol.settings.start_temp='65'
+  uci commit fancontrol
+  /etc/init.d/fancontrol restart
 fi
 uci commit
 if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
