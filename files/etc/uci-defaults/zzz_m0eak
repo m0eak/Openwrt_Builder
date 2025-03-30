@@ -1,4 +1,7 @@
 #!/bin/sh
+until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
+  sleep 1
+done
 if [ -x "$(command -v opkg)" ]; then
     PACKAGE_MANAGER="opkg list-installed"
     echo "opkg包管理器。" >&2
@@ -17,6 +20,10 @@ until [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
 done
 if [ "$(grep -c "x86_64" /etc/openwrt_release)" -ne '0' ];then
   uci set network.lan.ipaddr="192.168.100.1"
+  uci commit network
+fi
+if [ "$(grep -c "axt1800" /etc/board.json)" -ne '0' ];then
+  uci set network.lan.ipaddr="192.168.8.1"
   uci commit network
 fi
 if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
