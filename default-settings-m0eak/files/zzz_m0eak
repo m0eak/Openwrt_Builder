@@ -60,7 +60,10 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
   /etc/init.d/dnsmasq restart
 fi
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^cpufreq")" -ne '0' ];then
-/etc/init.d/cpufreq restart
+  uci set cpufreq.cpufreq.governor0='performance'
+  uci set cpufreq.cpufreq.minfreq0='864000'
+  uci set cpufreq.cpufreq.maxfreq0='1440000'
+  /etc/init.d/cpufreq restart
 fi
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$(uci -q get smartdns.@server[0].name)" = "清华大学TUNA协会" ];then
   uci set smartdns.@smartdns[0].prefetch_domain='1'
