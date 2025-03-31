@@ -205,7 +205,7 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: immortalwrt_x86_64-${{ env.release_tag }}
+        tag_name: MT-3000-${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
