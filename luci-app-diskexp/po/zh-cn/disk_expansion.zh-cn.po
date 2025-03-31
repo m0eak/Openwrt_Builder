@@ -1,0 +1,74 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "Disk Expansion"
+msgstr "磁盘扩容"
+
+msgid "Expand your root filesystem to external storage"
+msgstr "将您的根文件系统扩展到外部存储设备"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Select Partition"
+msgstr "选择分区"
+
+msgid "Choose a partition to expand your root filesystem to. WARNING: This operation will format the selected partition and ALL DATA on it will be LOST."
+msgstr "选择要将根文件系统扩展到的分区。警告：此操作将格式化所选分区，分区上的所有数据将丢失。"
+
+msgid "No suitable partitions found"
+msgstr "未找到合适的分区"
+
+msgid "Expand Now"
+msgstr "立即扩容"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "The root filesystem has been expanded."
+msgstr "根文件系统已扩容。"
+
+msgid "Revert Expansion"
+msgstr "撤销扩容"
+
+msgid "WARNING: Reverting the expansion will cause you to lose all current settings and configurations!"
+msgstr "警告：撤销扩容将导致您丢失所有当前设置和配置！"
+
+msgid "Disk expansion initiated. The system will restart soon to complete the process."
+msgstr "磁盘扩容已启动。系统将很快重启以完成该过程。"
+
+msgid "Expansion has been reverted. The system will restart now."
+msgstr "扩容已撤销。系统将立即重启。"
+
+msgid "WARNING: This will format the selected partition"
+msgstr "警告：这将格式化所选分区"
+
+msgid "and ALL DATA on it will be LOST."
+msgstr "其上的所有数据将丢失。"
+
+msgid "Are you sure you want to continue?"
+msgstr "您确定要继续吗？"
+
+msgid "WARNING: Reverting the expansion will DELETE all current settings and configurations."
+msgstr "警告：撤销扩容将删除所有当前设置和配置。"
+
+msgid "The system will return to its factory state. Are you sure you want to continue?"
+msgstr "系统将恢复到出厂状态。您确定要继续吗？"
+
+msgid "Using opkg package manager."
+msgstr "使用opkg包管理器。"
+
+msgid "Using apk package manager."
+msgstr "使用apk包管理器。"
+
+msgid "No valid package manager found."
+msgstr "未找到有效的包管理器。"
+
+msgid "Dependencies check passed"
+msgstr "依赖检查通过"
+
+msgid "Missing dependencies, please install: block-mount kmod-usb-storage kmod-fs-ext4 e2fsprogs kmod-fs-vfat"
+msgstr "缺少依赖，请安装：block-mount kmod-usb-storage kmod-fs-ext4 e2fsprogs kmod-fs-vfat"
+
+msgid "Expansion completed. Restarting system..."
+msgstr "扩容完成。正在重启系统..."
