@@ -15,9 +15,6 @@ fi
 VERSION=replace
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
-until [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
-  sleep 1
-done
 if [ "$(grep -c "x86_64" /etc/openwrt_release)" -ne '0' ];then
   uci set network.lan.ipaddr="192.168.100.1"
   uci commit network
