@@ -1,6 +1,7 @@
 local fs = require "nixio.fs"
 local sys = require "luci.sys"
 local util = require "luci.util"
+local http = require "luci.http"
 
 -- Check if already expanded
 local function is_expanded()
@@ -76,68 +77,60 @@ else
     msg.rawhtml = true
     msg.value = '<span style="color:green;font-weight:bold;">' .. translate("The root filesystem has been expanded.") .. '</span>'
     
-    -- Add revert option
-    local revert = f:field(Button, "_revert", translate("Revert Expansion"))
-    revert.inputtitle = translate("Revert Expansion")
-    revert.inputstyle = "remove"
-    revert.description = translate("WARNING: Reverting the expansion will cause you to lose all current settings and configurations!")
-    
-    function revert.write(self, section)
-        luci.sys.call("rm -f /etc/config/fstab && touch /etc/disk_expansion_reverted && reboot &")
-        luci.http.redirect(luci.dispatcher.build_url("admin", "system", "disk_expansion") .. "?reverted=1")
-    end
+    -- 使用纯HTML链接作为撤销按钮
+    local revert = f:field(DummyValue, "_revert_link", translate("Revert Expansion"))
+    revert.rawhtml = true
+    revert.value = string.format(
+        '<a href="%s" class="btn cbi-button cbi-button-remove" style="color:#fff;background-color:#dc3545;border-color:#dc3545;padding:5px 10px;border-radius:4px;text-decoration:none;" onclick="return confirm(\'%s\')">%s</a>' ..
+        '<p><span style="color:red;display:block;margin-top:5px;">%s</span></p>',
+        luci.dispatcher.build_url("admin", "system", "disk_expansion", "revert"),
+        util.pcdata(translate("WARNING: Reverting the expansion will DELETE all current settings and configurations. The system will return to its factory state. Are you sure you want to continue?")),
+        translate("Revert Expansion"),
+        translate("WARNING: Reverting the expansion will cause you to lose all current settings and configurations!")
+    )
 
     f.submit = false
     f.reset = false
 end
 
--- Include JavaScript for better UX
-f.description = f.description .. [[
+-- 添加简单JavaScript进行URL参数检查
+local js = [[
 <script type="text/javascript">
 document.addEventListener('DOMContentLoaded', function() {
     // Success/status messages
     var urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('expanded')) {
-        alert(']] .. translate("Disk expansion initiated. The system will restart soon to complete the process.") .. [[');
+        alert('%s');
     }
     if (urlParams.has('reverted')) {
-        alert(']] .. translate("Expansion has been reverted. The system will restart now.") .. [[');
+        alert('%s');
     }
-    
-    // Confirmation for expansion
-    var expandBtn = document.querySelector('input[type="submit"]');
-    if (expandBtn) {
-        expandBtn.addEventListener('click', function(e) {
+}); 
+
+// 为扩展按钮添加确认
+document.addEventListener('DOMContentLoaded', function() {
+    var expandButton = document.querySelector('input[type="submit"][name="cbi.submit"]');
+    if (expandButton) {
+        expandButton.addEventListener('click', function(e) {
             var select = document.querySelector('select[name="partition"]');
             if (select && select.value) {
-                if (!confirm(']] .. translate("WARNING: This will format the selected partition") .. [[ (' + select.value + ') ]] .. translate("and ALL DATA on it will be LOST.") .. [[\n\n]] .. translate("Are you sure you want to continue?") .. [[')) {
+                if (!confirm('%s ' + select.value + ' %s')) {
                     e.preventDefault();
                     return false;
                 }
             }
         });
     }
-    
-    // Confirmation for reverting
-    var revertBtn = document.querySelector('input[name="_revert"]');
-    if (revertBtn) {
-        revertBtn.addEventListener('click', function(e) {
-            if (!confirm(']] .. translate("WARNING: Reverting the expansion will DELETE all current settings and configurations.") .. [[\n\n]] .. translate("The system will return to its factory state. Are you sure you want to continue?") .. [[')) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    }
-    
-    // Apply some styling
-    document.querySelectorAll('.cbi-section').forEach(function(section) {
-        section.style.background = '#f9f9f9';
-        section.style.borderRadius = '5px';
-        section.style.padding = '15px';
-        section.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-    });
 });
 </script>
 ]]
+
+-- 安全地添加JavaScript
+f.description = f.description .. string.format(js,
+    util.pcdata(translate("Disk expansion initiated. The system will restart soon to complete the process.")),
+    util.pcdata(translate("Expansion has been reverted. The system will restart now.")),
+    util.pcdata(translate("WARNING: This will format the selected partition")),
+    util.pcdata(translate("and ALL DATA on it will be LOST. Are you sure you want to continue?"))
+)
 
 return f
