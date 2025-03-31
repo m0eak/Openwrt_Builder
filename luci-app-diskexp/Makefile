@@ -20,4 +20,23 @@ LUCI_PKGARCH:=all
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
-# call BuildPackage - OpenWrt buildroot signature
+define Package/$(PKG_NAME)/install
+	# 安装LuCI控制器（注意：以下每行命令前必须是TAB缩进）
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/controller
+	$(INSTALL_DATA) ./files/usr/lib/lua/luci/controller/disk_expansion.lua $(1)/usr/lib/lua/luci/controller/
+	
+	# 安装CBI模型
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/model/cbi
+	$(INSTALL_DATA) ./files/usr/lib/lua/luci/model/cbi/disk_expansion.lua $(1)/usr/lib/lua/luci/model/cbi/
+	
+	# 安装执行脚本
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) ./files/usr/bin/disk_expansion.sh $(1)/usr/bin/
+	
+	# 安装UCI默认配置
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/etc/uci-defaults/40_luci-disk-expansion $(1)/etc/uci-defaults/
+endef
+
+# 必须放在文件最后
+$(eval $(call BuildPackage,$(PKG_NAME)))
