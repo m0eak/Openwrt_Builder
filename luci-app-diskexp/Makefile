@@ -11,7 +11,7 @@ PKG_VERSION:=1.0.0
 PKG_RELEASE:=1
 
 PKG_LICENSE:=GPL-3.0-or-later
-PKG_MAINTAINER:=Your Name <your.email@example.com>
+PKG_MAINTAINER:=m0eak <moeakyou@gmail.com>
 
 LUCI_TITLE:=Disk Expansion
 LUCI_DESCRIPTION:=LuCI application for expanding root filesystem to external storage.
