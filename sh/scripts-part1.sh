@@ -58,7 +58,7 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.6/9999-gl-axt1800-dts-change-cooling-level.patch && echo "移动成功" || echo "移动失败"
   rm package/kernel/mac80211/patches/nss/ath11k/999-902-ath11k-fix-WDS-by-disabling-nwds.patch && echo "删除patch1成功" || echo "删除patch1失败（可能文件不存在）"
   rm package/kernel/mac80211/patches/nss/subsys/999-775-wifi-mac80211-Changes-for-WDS-MLD.patch && echo "删除patch2成功" || echo "删除patch2失败（可能文件不存在）"
-  rm package/kernel/mac80211/patches/nss/subsys/999-922-mac80211-fix-null-chanctx-warning-for-NSS-dynamic-VLAN.patch && echo "删除patch2成功" || echo "删除patch2失败（可能文件不存在）"
+  # rm package/kernel/mac80211/patches/nss/subsys/999-922-mac80211-fix-null-chanctx-warning-for-NSS-dynamic-VLAN.patch && echo "删除patch2成功" || echo "删除patch2失败（可能文件不存在）"
   if [ ! -s ./vermagic ]; then
     echo "none vermagic"
   else
