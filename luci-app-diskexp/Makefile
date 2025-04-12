@@ -34,5 +34,4 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/etc/uci-defaults/40_luci-disk-expansion $(1)/etc/uci-defaults/
 endef
 
-# 必须放在文件最后
 $(eval $(call BuildPackage,$(PKG_NAME)))
