@@ -16,13 +16,14 @@ TARGET_DIR="$PWD/package"
 # 定义要克隆的仓库和分支
 declare -A REPOS=(
     ["https://github.com/sbwml/luci-app-mosdns"]=""  # 使用默认分支
+    ["https://github.com/breeze303/luci-app-lucky.git"]="" # 使用默认分支
     ["https://github.com/chenmozhijin/turboacc"]="" # 使用默认分支
     ["https://github.com/breeze303/luci-app-lucky"]="" # 使用默认分支
     ["https://github.com/JiaY-Shi/fancontrol"]="" # 使用默认分支
     ["https://github.com/animegasan/luci-app-wolplus"]="" # 使用默认分支
     ["https://github.com/m0eak/luci-theme-asus"]="js"  # 指定 js 分支
     ["https://github.com/0x676e67/luci-theme-design"]="js"  # 指定 js 分支
-    ["https://github.com/nikkinikki-org/OpenWrt-nikki"]=""
+    ["https://github.com/nikkinikki-org/OpenWrt-nikki"]="" # 使用默认分支
 )
 
 # 删除 mosdns 相关的 Makefile
@@ -35,6 +36,16 @@ while IFS= read -r -d $'\0' file; do
     fi
 done
 echo "mosdns 相关的 Makefile 清理完成"
+
+echo "开始查找并删除 luci-app-lucky 相关的 Makefile"
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
+while IFS= read -r -d $'\0' file; do
+    if [[ "$file" == *"luci-app-lucky"* ]]; then
+        echo "删除 Makefile: $file"
+        rm -f "$file"
+    fi
+done
+echo "luci-app-lucky 相关的 Makefile 清理完成"
 
 # 克隆仓库
 clone_repo() {
