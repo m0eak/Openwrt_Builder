@@ -71,7 +71,12 @@ if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
     sed -i "s/replace/$VERSION2/g" $GITHUB_WORKSPACE/files/etc/uci-defaults/zzz_m0eak && echo "VERSION替换成功"
     curl -s https://downloads.immortalwrt.org/releases/$VERSION2/targets/x86/64/immortalwrt-$VERSION2-x86-64.manifest | grep kernel | awk '{print $3}' | sed -E 's/.*~([0-9a-f]+)-r[0-9]+$/\1/; s/.*-([0-9a-f]+)$/\1/' > vermagic && echo "Immortalwrt Vermagic Done" && echo "当前Vermagic：" && cat vermagic
     sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
-    curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+    #curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
+    wget -P ./target/linux/generic/hack-6.6 https://raw.githubusercontent.com/chenmozhijin/turboacc/refs/heads/package/hack-6.6/952-add-net-conntrack-events-support-multiple-registrant.patch && echo "下载成功" || echo "下载失败"
+    wget -P ./target/linux/generic/hack-6.6 https://raw.githubusercontent.com/chenmozhijin/turboacc/refs/heads/package/hack-6.6/953-net-patch-linux-kernel-to-support-shortcut-fe.patch && echo "下载成功" || echo "下载失败"
+    git clone https://github.com/chenmozhijin/turboacc.git -b package ./package/turboacc-package
+    cd ./package/turboacc-package && ls && find . -maxdepth 1 -type d ! -name 'shortcut-fe' && find . -maxdepth 1 -type d ! -name 'shortcut-fe' -exec rm -r {} +
+    cd ../..   
   if [ ! -s ./vermagic ]; then
     echo "none vermagic"
   else
