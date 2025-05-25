@@ -26,7 +26,7 @@ cat $GITHUB_OUTPUT
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
 
   # 定义kernel-6.12文件的路径
-  KERNEL_FILE="./include/kernel-6.12"
+  KERNEL_FILE="./target/linux/generic/kernel-6.12"
 
   # 检查文件是否存在
   if [ ! -f "$KERNEL_FILE" ]; then
