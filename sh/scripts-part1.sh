@@ -94,12 +94,10 @@ if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
     echo 'src-git kiddin9 https://github.com/kiddin9/openwrt-packages.git' >> feeds.conf.default
   fi
 fi
-if [ "$(grep -c "MT-3000" $GITHUB_OUTPUT)" -eq '1' ];then
-  # echo "src-git fancontrol https://github.com/JiaY-shi/fancontrol.git" >> feeds.conf.default
-  # 修补的firewall4、libnftnl、nftables与952补丁
+if [ "$(grep -c "TR-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   # 调整cooling-levels
-  wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch 
-  mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
+  # wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch 
+  # mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
   rm -rf feeds/packages/lang/golang
   git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
   # 固定内核版本值
