@@ -8,8 +8,8 @@
 
 ## Usage
 
-- 支持GL-inet AXT-1800, GL-inet MT-3000机型(192.168.8.1)，x86(192.168.100.1)，默认无密码。
-- MT3000 24.10 内置Tailscale，风扇控制，WIFI计划，微信推送，释放内存
+- 支持GL-inet AXT-1800, TR-3000机型(192.168.8.1)，x86(192.168.100.1)，默认无密码。
+- TR-3000 24.10 内置Tailscale，风扇控制，WIFI计划，微信推送，释放内存
 - AXT1800 内置Tailscale，风扇控制，openclash，微信推送，mosdns，WIFI计划，kms激活，ttyd，quickstart，释放内存
 - x86 内置Wireguard，openclash，微信推送，mosdns，kms激活，ttyd，释放内存,socat
 ![image](https://github.com/m0eak/Openwrt_Builder/assets/50049180/9671d793-51f8-484c-bae7-9567e3fd5f9c)
