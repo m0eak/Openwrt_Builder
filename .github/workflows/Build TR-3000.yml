@@ -8,7 +8,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: Build mt3000
+name: Build TR-3000
 
 on:
   #schedule:
@@ -100,7 +100,7 @@ jobs:
         
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=MT-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=TR-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
         cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
@@ -116,7 +116,7 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=MT-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=TR-3000" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/
@@ -209,7 +209,7 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: MT-3000-${{ env.release_tag }}
+        tag_name: TR-3000-${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
