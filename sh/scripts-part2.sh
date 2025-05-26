@@ -26,6 +26,8 @@ declare -A REPOS=(
     ["https://github.com/0x676e67/luci-app-design-config.git"]="" # 使用默认分支
     ["https://github.com/nikkinikki-org/OpenWrt-nikki"]="" # 使用默认分支
     ["https://github.com/sirpdboy/luci-app-partexp"]="" # 使用默认分支
+    ["https://github.com/pymumu/luci-app-smartdns"]="" # 使用默认分支
+    ["https://github.com/pymumu/smartdns"]="" # 使用默认分支
 )
 
 # 删除 mosdns 相关的 Makefile
@@ -48,6 +50,17 @@ while IFS= read -r -d $'\0' file; do
     fi
 done
 echo "luci-app-lucky 相关的 Makefile 清理完成"
+
+echo "开始查找并删除 smartdns 相关的 Makefile"
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
+while IFS= read -r -d $'\0' file; do
+    if [[ "$file" == *"smartdns"* ]]; then
+        echo "删除 Makefile: $file"
+        rm -f "$file"
+    fi
+done
+echo "smartdns 相关的 Makefile 清理完成"
+
 
 # 克隆仓库
 clone_repo() {
