@@ -98,8 +98,8 @@ if [ "$(grep -c "TR-3000" $GITHUB_OUTPUT)" -eq '1' ];then
   # 调整cooling-levels
   # wget https://raw.githubusercontent.com/m0eak/openwrt_patch/main/mt3000/980-dts-mt7921-add-cooling-levels.patch 
   # mv 980-dts-mt7921-add-cooling-levels.patch ./target/linux/mediatek/patches-5.15/980-dts-mt7921-add-cooling-levels.patch 
-  rm -rf feeds/packages/lang/golang
-  git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
+  # rm -rf feeds/packages/lang/golang
+  # git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
   # 固定内核版本值
   # curl -s https://downloads.immortalwrt.org/releases/$VERSION/targets/mediatek/filogic/immortalwrt-$VERSION-mediatek-filogic.manifest | grep kernel | awk '{print $3}' | awk -F- '{print $3}' > vermagic && echo "MT3000 Vermagic Done" && echo "当前Vermagic：" && cat vermagic
   # sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
