@@ -24,7 +24,7 @@ VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
 
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
-
+  cat feeds/packages/lang/rust/Makefile
   # 定义kernel-6.12文件的路径
   KERNEL_FILE="./target/linux/generic/kernel-6.12"
 
