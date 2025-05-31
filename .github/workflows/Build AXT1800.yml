@@ -143,7 +143,6 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) 线程编译"
-        export RUST_CONFIGURE_ARGS="--llvm-download-ci-llvm=if-unchanged"
         echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
         echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
