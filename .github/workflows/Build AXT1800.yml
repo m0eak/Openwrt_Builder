@@ -20,7 +20,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_IMM: https://github.com/VIKINGYFY/immortalwrt.git
+  REPO_URL_IMM: https://github.com/m0eak/immortalwrt-ipq
   REPO_BRANCH: main
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_IMM: ./config/axt1800.config
