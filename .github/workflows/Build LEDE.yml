@@ -14,10 +14,6 @@ on:
         description: '是否编译docker'
         required: false
         default: 'false'
-      tag2:
-        description: 'lede版本'
-        required: false
-        default: 'v24.10.1'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
@@ -84,7 +80,6 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
           echo "WORKFLOW_NAME=x86_lede" | tr ' ' '_' >> $GITHUB_OUTPUT
-          echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
     - name: 克隆源代码
