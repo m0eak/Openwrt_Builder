@@ -22,7 +22,7 @@ KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
 VERSION=${TAG#v} && echo "op当前版本：$VERSION"
 VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
-
+sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
 if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   cat feeds/packages/lang/rust/Makefile
   # 定义kernel-6.12文件的路径
