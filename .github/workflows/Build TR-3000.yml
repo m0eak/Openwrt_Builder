@@ -27,7 +27,7 @@ on:
 
 env:
   REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
-  REPO_BRANCH: 2410
+  REPO_BRANCH: openwrt-24.10-6.6
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_IMM: ./config/tr3000.config
   CONFIG_FILE_DOCKER: ./config/docker.config
