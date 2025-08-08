@@ -29,6 +29,7 @@ declare -A REPOS=(
     ["https://github.com/sirpdboy/luci-app-partexp"]="" # 使用默认分支
     ["https://github.com/pymumu/luci-app-smartdns"]="" # 使用默认分支
     ["https://github.com/pymumu/smartdns"]="" # 使用默认分支
+    ["https://github.com/sbwml/v2ray-geodata"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
@@ -62,7 +63,15 @@ while IFS= read -r -d $'\0' file; do
 done
 echo "smartdns 相关的 Makefile 清理完成"
 
-
+echo "开始查找并删除 v2ray 相关的 Makefile"
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
+while IFS= read -r -d $'\0' file; do
+    if [[ "$file" == *"v2ray-geodata"* ]]; then
+        echo "删除 Makefile: $file"
+        rm -f "$file"
+    fi
+done
+echo "v2ray-geodata 相关的 Makefile 清理完成"
 # 克隆仓库
 clone_repo() {
     local repo_url=$1
