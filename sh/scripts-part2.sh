@@ -116,5 +116,6 @@ else
     echo "找到 Makefile，继续执行"
 fi
 
-rm -rf feeds/packages/lang/golang
+rm -rf feeds/packages/lang/golang && echo "删除golang"
 git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
+cat feeds/packages/lang/golang/golang/Makefile
