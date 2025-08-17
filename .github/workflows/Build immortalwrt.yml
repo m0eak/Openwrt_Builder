@@ -147,8 +147,9 @@ jobs:
       id: compile
       run: |
         cd openwrt
+        export GOTOOLCHAIN=go1.24.0+auto
         echo -e "$(nproc) 线程编译"
-        echo "y" | make -j1 V=s
+        echo "y" | make package/luci-app-mosdns/compile V=s
         echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
