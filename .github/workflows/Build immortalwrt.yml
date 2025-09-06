@@ -96,7 +96,7 @@ jobs:
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
         git fetch --tags # 获取最新的标签
-        git checkout "tags/${TAG2}" || git checkout "${TAG2}" # 尝试检出标签，如果失败则尝试检出分支
+        # git checkout "tags/${TAG2}" || git checkout "${TAG2}" # 尝试检出标签，如果失败则尝试检出分支
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         
     - name: 加载自定义源
