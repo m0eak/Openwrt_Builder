@@ -119,10 +119,25 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
-    - name: Setup Go environment for Host
+    - name: 强制卸载系统自带的 Go
+      run: |
+        # 彻底移除 apt 安装的 golang
+        sudo apt-get purge -y golang-go
+        sudo apt-get autoremove -y
+        # 清理可能存在的残留
+        sudo rm -rf /usr/lib/go /usr/local/go
+
+    - name: 设置并安装 Go 1.24
       uses: actions/setup-go@v5
       with:
-        go-version: '1.24' 
+        go-version: '1.24'
+
+    - name: 验证 Go 版本
+      run: |
+        echo "检查当前 Go 版本..."
+        go version
+        echo "Go 可执行文件路径:"
+        which go
 
     - name: Cache build assets
       id: cache
