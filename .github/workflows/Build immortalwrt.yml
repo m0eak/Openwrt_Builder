@@ -17,7 +17,7 @@ on:
       tag2:
         description: 'ImmortalWrt版本'
         required: false
-        default: 'v24.10.1'
+        default: 'v24.10.2'
       ssh:
         description: 'SSH 连接到 Actions'
         required: false
