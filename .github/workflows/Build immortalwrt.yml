@@ -18,10 +18,6 @@ on:
         description: 'ImmortalWrt版本'
         required: false
         default: 'v24.10.2'
-      ssh:
-        description: 'SSH 连接到 Actions'
-        required: false
-        default: 'false'
 
 env:
   REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
@@ -128,17 +124,22 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
-    - name: SSH 连接到 Actions
-      uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-
     - name: Setup Go environment for Host
       uses: actions/setup-go@v5
       with:
         go-version: '1.24' 
+
+    - name: Cache build assets
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          openwrt/staging_dir
+          openwrt/build_dir
+          openwrt/dl
+        key: ${{ runner.os }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', '**/feeds.conf.default', '**/scripts-part*.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.TAG2 }}-
 
     - name: 下载软件包
       id: package
