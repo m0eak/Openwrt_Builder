@@ -119,26 +119,6 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
 
-    - name: 强制卸载系统自带的 Go
-      run: |
-        # 彻底移除 apt 安装的 golang
-        sudo apt-get purge -y golang-go
-        sudo apt-get autoremove -y
-        # 清理可能存在的残留
-        sudo rm -rf /usr/lib/go /usr/local/go
-
-    - name: 设置并安装 Go 1.24
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.24'
-
-    - name: 验证 Go 版本
-      run: |
-        echo "检查当前 Go 版本..."
-        go version
-        echo "Go 可执行文件路径:"
-        which go
-
     - name: 下载软件包
       id: package
       run: |
@@ -150,17 +130,8 @@ jobs:
     - name: 编译固件
       id: compile
       run: |
-        cd openwrt
-        GO_EXECUTABLE_PATH=$(which go)
-        
-        echo "--- Final Check Before Make ---"
-        echo "Go executable to be forced: $GO_EXECUTABLE_PATH"
-        echo "Go version of the executable: $($GO_EXECUTABLE_PATH version)"
-        echo "-------------------------------"
-        
         echo -e "$(nproc) 线程编译"
-        make -j$(expr $(nproc) + 1) HOST_GO=$GO_EXECUTABLE_PATH || \
-        make -j1 V=s HOST_GO=$GO_EXECUTABLE_PATH
+        make -j$(expr $(nproc) + 1) || make -j1 V=s
         echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
