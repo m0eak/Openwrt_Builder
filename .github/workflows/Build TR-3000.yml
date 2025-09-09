@@ -20,10 +20,6 @@ on:
         description: 'istore'
         required: false
         default: 'false'
-      ssh:
-        description: 'SSH 连接到 Actions'
-        required: false
-        default: 'false'
 
 env:
   REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
@@ -106,10 +102,11 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
+        ./scripts/feeds update -a
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 更新源
-      run: cd openwrt && ./scripts/feeds update -a
+    #- name: 更新源
+    #  run: cd openwrt && ./scripts/feeds update -a
 
     - name: 安装源
       run: cd openwrt && ./scripts/feeds install -a
@@ -126,13 +123,8 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
-
-    - name: SSH 连接到 Actions
-      uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        echo "当前diffconfig:"
+        ./scripts/diffconfig.sh    
 
     - name: 下载软件包
       id: package
