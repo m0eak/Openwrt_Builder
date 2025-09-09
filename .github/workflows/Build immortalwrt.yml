@@ -139,18 +139,6 @@ jobs:
         echo "Go 可执行文件路径:"
         which go
 
-    - name: Cache build assets
-      id: cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          openwrt/staging_dir
-          openwrt/build_dir
-          openwrt/dl
-        key: ${{ runner.os }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', '**/feeds.conf.default', '**/scripts-part*.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ env.TAG2 }}-
-
     - name: 下载软件包
       id: package
       run: |
