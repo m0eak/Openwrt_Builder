@@ -122,6 +122,17 @@ jobs:
         echo "当前diffconfig:"
         ./scripts/diffconfig.sh    
 
+    - name: 启用编译缓存
+      uses: actions/cache@v4
+      with:
+        path: |
+          openwrt/dl
+          openwrt/staging_dir
+          openwrt/build_dir
+        key: ${{ runner.os }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.TAG2 }}-
+
     - name: 下载软件包
       id: package
       run: |
