@@ -131,6 +131,7 @@ jobs:
     - name: 编译固件
       id: compile
       run: |
+        cd openwrt
         echo -e "$(nproc) 线程编译"
         make -j$(expr $(nproc) + 1) || make -j1 V=s
         echo "compile-status=success" >> $GITHUB_ENV
