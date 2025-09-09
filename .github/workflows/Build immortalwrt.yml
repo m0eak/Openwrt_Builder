@@ -119,6 +119,8 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
+        echo "当前diffconfig:"
+        ./scripts/diffconfig.sh        
 
     - name: 启用编译缓存
       uses: actions/cache@v4
