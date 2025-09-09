@@ -17,11 +17,7 @@ on:
       tag2:
         description: 'ImmortalWrt版本'
         required: false
-        default: 'v24.10.1'
-      ssh:
-        description: 'SSH 连接到 Actions'
-        required: false
-        default: 'false'
+        default: 'v24.10.2'
 
 env:
   REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
@@ -71,13 +67,8 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo -E apt -yqq purge firefox
-          sudo -E apt -yqq update
-          sudo -E apt -yqq full-upgrade
-          sudo -E apt -yqq autoremove --purge
-          sudo -E apt -yqq autoclean
-          sudo -E apt -yqq clean
-          sudo -E apt -yqq install dos2unix libfuse-dev
+          sudo -E apt-get update
+          sudo -E apt-get -y install dos2unix libfuse-dev
           sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo timedatectl set-timezone "$TZ"
@@ -107,10 +98,11 @@ jobs:
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
+        ./scripts/feeds update -a
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 更新源
-      run: cd openwrt && ./scripts/feeds update -a
+    #- name: 更新源
+    #  run: cd openwrt && ./scripts/feeds update -a
 
     - name: 安装源
       run: cd openwrt && ./scripts/feeds install -a
@@ -127,13 +119,19 @@ jobs:
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
+        echo "当前diffconfig:"
+        ./scripts/diffconfig.sh        
 
-    - name: SSH 连接到 Actions
-      uses: P3TERX/ssh2actions@v1.0.0
-      if: (github.event.inputs.ssh == 'true' && github.event.inputs.ssh != 'false') || contains(github.event.action, 'ssh')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+    - name: 启用编译缓存
+      uses: actions/cache@v4
+      with:
+        path: |
+          openwrt/dl
+          openwrt/staging_dir
+          openwrt/build_dir
+        key: ${{ runner.os }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.TAG2 }}-
 
     - name: 下载软件包
       id: package
@@ -148,7 +146,7 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) 线程编译"
-        echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
+        make -j$(expr $(nproc) + 1) || make -j1 V=s
         echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV

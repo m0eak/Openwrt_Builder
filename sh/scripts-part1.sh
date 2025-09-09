@@ -66,6 +66,9 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
 fi
 if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
   if [ "$(grep -c "immortalwrt" $GITHUB_OUTPUT)" -eq '1' ];then
+    rm -rf feeds/packages/lang/golang && echo "删除golang"
+    git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
+    cat feeds/packages/lang/golang/golang/Makefile
     #rm -rf feeds/packages/lang/golang && echo "删除golang"
     #git clone https://github.com/sbwml/packages_lang_golang -b 24.x feeds/packages/lang/golang
     #cat feeds/packages/lang/golang/golang/Makefile
