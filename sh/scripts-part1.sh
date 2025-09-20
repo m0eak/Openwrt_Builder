@@ -78,7 +78,7 @@ if [ "$(grep -c "x86" $GITHUB_OUTPUT)" -eq '1' ];then
     #curl -sSL https://raw.githubusercontent.com/chenmozhijin/turboacc/luci/add_turboacc.sh -o add_turboacc.sh && bash add_turboacc.sh
     #wget -P ./target/linux/generic/hack-6.6 https://raw.githubusercontent.com/chenmozhijin/turboacc/refs/heads/package/hack-6.6/952-add-net-conntrack-events-support-multiple-registrant.patch && echo "下载成功" || echo "下载失败"
     #wget -P ./target/linux/generic/hack-6.6 https://raw.githubusercontent.com/chenmozhijin/turboacc/refs/heads/package/hack-6.6/953-net-patch-linux-kernel-to-support-shortcut-fe.patch && echo "下载成功" || echo "下载失败"
-    git clone https://github.com/chenmozhijin/turboacc.git -b package ./package/turboacc-package
+    #git clone https://github.com/chenmozhijin/turboacc.git -b package ./package/turboacc-package
     #cd ./package/turboacc-package && ls && find . -maxdepth 1 -type d ! -name 'shortcut-fe' && find . -maxdepth 1 -type d ! -name 'shortcut-fe' -exec rm -r {} +
     #cd ../..   
     if [ ! -s ./vermagic ]; then
