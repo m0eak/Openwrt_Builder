@@ -125,9 +125,12 @@ jobs:
           openwrt/dl
           openwrt/staging_dir
           openwrt/build_dir
-        key: ${{ runner.os }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
+        key: ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
         restore-keys: |
-          ${{ runner.os }}-${{ env.TAG2 }}-
+          ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-
+          
+    - name: 清理 Go 模块缓存
+      run: rm -rf openwrt/dl/go-mod-cache
 
     - name: 下载软件包
       id: package
