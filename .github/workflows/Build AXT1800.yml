@@ -16,8 +16,8 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_IMM: https://github.com/VIKINGYFY/immortalwrt.git
-  REPO_BRANCH: main
+  REPO_URL_IMM: https://github.com/LiBwrt/openwrt-6.x
+  REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE_IMM: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
