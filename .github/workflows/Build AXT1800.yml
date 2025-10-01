@@ -85,6 +85,13 @@ jobs:
         git clone $REPO_URL --single-branch openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
+        
+        # GitHub Action 移除国内下载源
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+          if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+            sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+          fi
+        
         git fetch --tags # 获取最新的标签
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         
