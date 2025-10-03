@@ -51,6 +51,9 @@ if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ] ;then
   echo "提取的内核版本号: $KERNEL_VERSION"
   echo "你可以通过 \$KERNEL_VERSION 变量使用这个值"
   # sed -i '63s/0x1/0xf/;70s/0x1/0xf/' ./target/linux/qualcommax/patches-6.12/0054-v6.8-arm64-dts-qcom-ipq6018-use-CPUFreq-NVMEM.patch && echo "CPUFreq Done"
+  rm -rf feeds/packages/lang/golang && echo "删除golang"
+  git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+  cat feeds/packages/lang/golang/golang/Makefile
   wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL_VERSION-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
   wget https://raw.githubusercontent.com/m0eak/openwrt_patch/refs/heads/main/gl-axt1800/9999-gl-axt1800-dts-change-cooling-level.patch && echo "下载成功" || echo "下载失败"
   mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.12/9999-gl-axt1800-dts-change-cooling-level.patch && echo "移动成功" || echo "移动失败"
