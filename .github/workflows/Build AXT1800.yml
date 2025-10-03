@@ -166,7 +166,7 @@ jobs:
           if [ -n "$CACHE_LIST" ]; then
             for CACHE_KEY in $CACHE_LIST; do
               echo "删除旧缓存: $CACHE_KEY"
-              gh cache delete "$CACHE_KEY" --confirm
+              gh cache delete "$CACHE_KEY" 
             done
             echo "相关旧缓存清理完毕!"
           else
