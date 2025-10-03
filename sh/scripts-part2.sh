@@ -30,6 +30,7 @@ declare -A REPOS=(
     ["https://github.com/pymumu/luci-app-smartdns"]="" # 使用默认分支
     ["https://github.com/pymumu/smartdns"]="" # 使用默认分支
     ["https://github.com/sbwml/v2ray-geodata"]=""
+    ["https://github.com/vernesong/OpenClash.git"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
@@ -37,6 +38,16 @@ echo "开始查找并删除 mosdns 相关的 Makefile"
 find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
 while IFS= read -r -d $'\0' file; do
     if [[ "$file" == *"mosdns"* ]]; then
+        echo "删除 Makefile: $file"
+        rm -f "$file"
+    fi
+done
+echo "mosdns 相关的 Makefile 清理完成"
+
+echo "开始查找并删除 OpenClash 相关的 Makefile"
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
+while IFS= read -r -d $'\0' file; do
+    if [[ "$file" == *"openclash"* ]]; then
         echo "删除 Makefile: $file"
         rm -f "$file"
     fi
