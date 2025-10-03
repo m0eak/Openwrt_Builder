@@ -131,8 +131,7 @@ jobs:
       id: check-cache
       uses: actions/cache@v4
       with:
-        # 使用您熟悉的、基于 hashFiles 的 key，并加入了 github.workflow 来隔离机型
-        key: ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
+        key: ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh', 'openwrt/target/linux/generic/kernel-*') }}
         restore-keys: |
           ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-
         path: |
