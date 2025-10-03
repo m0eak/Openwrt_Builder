@@ -15,14 +15,6 @@ fi
 VERSION=replace
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
-if [ "$(grep -c "x86_64" /etc/openwrt_release)" -ne '0' ];then
-  uci set network.lan.ipaddr="192.168.100.1"
-  uci commit network
-fi
-if [ "$(grep -c "axt1800" /etc/board.json)" -ne '0' ];then
-  uci set network.lan.ipaddr="192.168.8.1"
-  uci commit network
-fi
 if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
   sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
 fi
@@ -51,17 +43,7 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
   uci commit aria2
   /etc/init.d/aria2 restart
 fi
-if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^dnsmasq")" -ne '0' ];then
-  uci set dhcp.@dnsmasq[0].cachesize='0'
-  uci commit dhcp
-  /etc/init.d/dnsmasq restart
-fi
-if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^cpufreq")" -ne '0' ];then
-  uci set cpufreq.cpufreq.governor0='performance'
-  uci set cpufreq.cpufreq.minfreq0='864000'
-  uci set cpufreq.cpufreq.maxfreq0='1440000'
-  /etc/init.d/cpufreq restart
-fi
+
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$(uci -q get smartdns.@server[0].name)" = "清华大学TUNA协会" ];then
   uci set smartdns.@smartdns[0].prefetch_domain='1'
   uci set smartdns.@smartdns[0].port='6053'
@@ -269,20 +251,23 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^smartdns")" -ne '0' ] && [ ! "$
 fi
 uci set luci.main.mediaurlbase='/luci-static/bootstrap'
 uci commit luci
+
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
 sed -i "s/option holdoff '4'/option holdoff '2'/" /etc/config/luci
 sed -i "s/option timeout '5'/option timeout '3'/" /etc/config/luci
 sed -i "s/option display '1.5'/option display '1'/" /etc/config/luci
+
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
   uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device1/cur_state'
-  uci set fancontrol.settings.start_speed='100'
-  uci set fancontrol.settings.start_temp='65'
+  uci set fancontrol.settings.start_speed='65'
+  uci set fancontrol.settings.start_temp='70'
   uci commit fancontrol
   /etc/init.d/fancontrol restart
   echo "0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
   echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
+
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "MT3000" /etc/board.json)" -ne '0' ];then
   uci set fancontrol.settings.enabled='1'
   uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device0/cur_state'
@@ -292,26 +277,17 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' 
   /etc/init.d/fancontrol restart
 fi
 uci commit
-if [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
-  touch /etc/crontabs/root
-  cat <<EOL > /etc/rc.local
-# Put your custom commands here that should be executed once
-# the system init finished. By default this file does nothing.
-sysctl -w dev.nss.clock.auto_scale=1
-EOL
-fi
-if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
-  echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
-  /etc/init.d/network restart
-fi
+
+#if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
+#  echo "net.netfilter.nf_conntrack_max=65535" >> /etc/sysctl.conf
+#  /etc/init.d/network restart
+#fi
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "turboacc")" -ne '0' ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
   uci set turboacc.config.fullcone_nat6='0'
   uci set turboacc.config.bbr_cca='0'
   uci set turboacc.config.sw_flow='0'
   /etc/init.d/turboacc restart
 fi
-
-need_restart=0
 
 if [ -e /sbin/cpuusage ];then
   sed -i 's/HWE:/NSS:/' /sbin/cpuusage
@@ -329,17 +305,4 @@ if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * e
   echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 
-if [ "$($PACKAGE_MANAGER 2>/dev/null | grep -c "luci-app-tailscale")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-tailscale.json | grep -c "services")" -ne '0' ]; then
-  sed -i 's/services/vpn/g' /usr/share/luci/menu.d/luci-app-tailscale.json && rm -rf luci-indexcache.*.json
-  need_restart=1
-fi
-
-if [ "$($PACKAGE_MANAGER 2>/dev/null | grep -c "luci-app-ttyd")" -ne '0' ] && [ "$(cat /usr/share/luci/menu.d/luci-app-ttyd.json | grep -c "services")" -ne '0' ]; then
-  sed -i 's/services/system/g' /usr/share/luci/menu.d/luci-app-ttyd.json && rm -rf luci-indexcache.*.json
-  need_restart=1
-fi
-
-if [ "$need_restart" -eq '1' ]; then
-  /etc/init.d/rpcd restart
-fi
 exit 0
