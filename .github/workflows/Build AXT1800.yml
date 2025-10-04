@@ -178,6 +178,7 @@ jobs:
       id: package
       run: |
          cd openwrt
+         make package/luci-app-mosdns/v2dat/clean
          make download -j8
          find dl -size -1024c -exec ls -l {} \;
          find dl -size -1024c -exec rm -f {} \;
