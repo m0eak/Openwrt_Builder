@@ -28,6 +28,7 @@ env:
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
+  CACHE_TOOLCHAIN: true
   TZ: Asia/Shanghai
 
 jobs:
@@ -127,58 +128,18 @@ jobs:
         echo "当前diffconfig:"
         ./scripts/diffconfig.sh    
 
-    - name: 检查并恢复缓存
-      id: check-cache
-      uses: actions/cache@v4
+    - name: Cache Toolchain(缓存工具链)
+      uses: HiGarfield/cachewrtbuild@main
+      if: env.CACHE_TOOLCHAIN != 'false'
       with:
-        key: ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh', 'openwrt/target/linux/generic/kernel-*') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-
-        path: |
-          openwrt/dl
-          openwrt/.ccache
-          openwrt/staging_dir/host*
-          openwrt/staging_dir/tool*
-
-    - name: 更新缓存并处理时间戳
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        if [ "${{ steps.check-cache.outputs.cache-hit }}" == "true" ]; then
-          echo "缓存命中，更新时间戳..."
-          cd openwrt
-          find staging_dir -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-            find "$DIR" -type f -exec touch {} +
-          done
-          echo "时间戳更新完毕!"
-        else
-          echo "缓存未命中，开始主动清理相关的旧缓存..."
-          
-          # 清理 Go 模块缓存，防止污染
-          rm -rf openwrt/dl/go-mod-cache
-
-          # 构造用于搜索的 key 前缀
-          CACHE_PREFIX="${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-"
-          
-          echo "正在搜索前缀为 '${CACHE_PREFIX}' 的旧缓存..."
-          CACHE_LIST=$(gh cache list --key "$CACHE_PREFIX" | cut -f 1)
-          
-          if [ -n "$CACHE_LIST" ]; then
-            for CACHE_KEY in $CACHE_LIST; do
-              echo "删除旧缓存: $CACHE_KEY"
-              gh cache delete "$CACHE_KEY" 
-            done
-            echo "相关旧缓存清理完毕!"
-          else
-            echo "没有找到相关的旧缓存。"
-          fi
-        fi
-
+        ccache: true
+        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(env.CONFIG_FILE_IMM, '**/scripts-part*.sh') }}
+        prefix: ${{ env.OPENWRT_PATH }}
+    
     - name: 下载软件包
       id: package
       run: |
          cd openwrt
-         make package/luci-app-mosdns/v2dat/clean
          make download -j8
          find dl -size -1024c -exec ls -l {} \;
          find dl -size -1024c -exec rm -f {} \;
