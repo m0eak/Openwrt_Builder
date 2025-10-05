@@ -134,7 +134,6 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-
         path: |
-          openwrt/dl
           openwrt/.ccache
           openwrt/staging_dir/host*
           openwrt/staging_dir/tool*
