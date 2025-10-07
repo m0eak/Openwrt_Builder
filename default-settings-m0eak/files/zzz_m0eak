@@ -15,9 +15,6 @@ fi
 VERSION=replace
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
-if [ "$(grep -c "m0eak" /etc/openwrt_release)" -eq '0' ];then
-  sed -i "/^DISTRIB_DESCRIPTION='/s/'$/ Compiled by m0eak'/" /etc/openwrt_release
-fi
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.enabled='1'
   uci set mosdns.config.redirect='0'
@@ -268,14 +265,6 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' 
   echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
 
-if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' ] && [ "$(grep -c "MT3000" /etc/board.json)" -ne '0' ];then
-  uci set fancontrol.settings.enabled='1'
-  uci set fancontrol.settings.fan_file='/sys/devices/virtual/thermal/cooling_device0/cur_state'
-  uci set fancontrol.settings.start_speed='100'
-  uci set fancontrol.settings.start_temp='65'
-  uci commit fancontrol
-  /etc/init.d/fancontrol restart
-fi
 uci commit
 
 #if [ "$(grep -c "net.netfilter.nf_conntrack_max=65535" /etc/sysctl.conf)" -eq '0' ];then
