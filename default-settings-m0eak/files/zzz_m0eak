@@ -1,7 +1,5 @@
 #!/bin/sh
-until [ "$( opkg list-installed 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
-  sleep 1
-done
+sleep 10s
 if [ -x "$(command -v opkg)" ]; then
     PACKAGE_MANAGER="opkg list-installed"
     echo "opkg包管理器。" >&2
@@ -12,7 +10,9 @@ else
     echo "无法找到有效的包管理器。" >&2
     exit 1
 fi
-VERSION=replace
+until [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^kernel")" -ne '0' ]; do
+  sleep 1
+done
 chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
