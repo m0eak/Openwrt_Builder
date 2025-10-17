@@ -31,6 +31,7 @@ declare -A REPOS=(
     ["https://github.com/pymumu/smartdns"]="" # 使用默认分支
     ["https://github.com/sbwml/v2ray-geodata"]=""
     ["https://github.com/vernesong/OpenClash.git"]=""
+    ["https://github.com/eamonxg/luci-theme-aurora"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
