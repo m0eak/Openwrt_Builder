@@ -19,7 +19,7 @@ env:
   REPO_URL_IMM: https://github.com/LiBwrt/openwrt-6.x
   REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE_IMM: ./config/axt1800.config
+  CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -120,7 +120,7 @@ jobs:
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/
         [ -e files ] && mv ./files openwrt/files
-        [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
@@ -133,7 +133,7 @@ jobs:
       if: env.CACHE_TOOLCHAIN != 'false'
       with:
         ccache: true
-        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(env.CONFIG_FILE_IMM, '**/scripts-part*.sh') }}
+        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(env.CONFIG_FILE, '**/scripts-part*.sh') }}
         prefix: ${{ env.OPENWRT_PATH }}
     
     - name: 下载软件包
@@ -211,7 +211,7 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: immortalwrt_gl-axt1800-nss-${{ env.release_tag }}
+        tag_name: libwrt_gl-axt1800-nss${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}

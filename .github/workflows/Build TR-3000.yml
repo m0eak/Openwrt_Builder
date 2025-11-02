@@ -25,7 +25,7 @@ env:
   REPO_URL_IMM: https://github.com/padavanonly/immortalwrt-mt798x-24.10.git
   REPO_BRANCH: openwrt-24.10-6.6
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE_IMM: ./config/tr3000.config
+  CONFIG_FILE: ./config/tr3000.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -76,7 +76,7 @@ jobs:
           sudo -E apt -yqq autoclean
           sudo -E apt -yqq clean
           sudo -E apt -yqq install dos2unix libfuse-dev
-          sudo bash -c 'bash <(curl -sL https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
@@ -118,7 +118,7 @@ jobs:
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/
         [ -e files ] && mv ./files openwrt/files
-        [ -e $CONFIG_FILE_IMM ] && mv $CONFIG_FILE_IMM openwrt/.config
+        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH

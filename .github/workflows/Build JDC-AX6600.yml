@@ -1,4 +1,4 @@
-name: Build immortalwrt
+name: Build JDC-AX6600
 
 on:
   #schedule:
@@ -14,16 +14,12 @@ on:
         description: '是否编译docker'
         required: false
         default: 'false'
-      tag2:
-        description: 'ImmortalWrt版本'
-        required: false
-        default: 'v24.10.4'
 
 env:
-  REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
-  REPO_BRANCH: main
+  REPO_URL_IMM: https://github.com/LiBwrt/openwrt-6.x
+  REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: ./config/immortalwrt.config
+  CONFIG_FILE: ./config/jdcax6600.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -32,6 +28,7 @@ env:
   UPLOAD_BIN_DIR: true
   UPLOAD_FIRMWARE: true
   UPLOAD_RELEASE: true
+  CACHE_TOOLCHAIN: true
   TZ: Asia/Shanghai
 
 jobs:
@@ -67,14 +64,17 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo -E apt-get update
-          sudo -E apt-get -y install dos2unix libfuse-dev
+          sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
+          sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+          sudo -E apt-get -y update
           sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
           sudo -E systemctl daemon-reload
+          sudo -E apt-get -y autoremove --purge
+          sudo -E apt-get -y clean
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
-          echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+          echo "WORKFLOW_NAME=JDC-AX6600" | tr ' ' '_' >> $GITHUB_OUTPUT
           echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
@@ -86,13 +86,19 @@ jobs:
         git clone $REPO_URL --single-branch openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
+        
+        # GitHub Action 移除国内下载源
+        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
+          if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+            sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+          fi
+        
         git fetch --tags # 获取最新的标签
-        git checkout "tags/${TAG2}" || git checkout "${TAG2}" # 尝试检出标签，如果失败则尝试检出分支
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=JDC-AX6600" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
         cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
@@ -109,7 +115,7 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=JDC-AX6600" | tr ' ' '_' >> $GITHUB_OUTPUT
         cat $GITHUB_OUTPUT
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/
@@ -120,54 +126,16 @@ jobs:
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
         echo "当前diffconfig:"
-        ./scripts/diffconfig.sh        
+        ./scripts/diffconfig.sh    
 
-    - name: 检查并恢复缓存
-      id: check-cache
-      uses: actions/cache@v4
+    - name: Cache Toolchain(缓存工具链)
+      uses: HiGarfield/cachewrtbuild@main
+      if: env.CACHE_TOOLCHAIN != 'false'
       with:
-        key: ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-${{ hashFiles('openwrt/.config', 'openwrt/feeds.conf.default', '**/scripts-part*.sh') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-
-        path: |
-          openwrt/.ccache
-          openwrt/staging_dir/host*
-          openwrt/staging_dir/tool*
-
-    - name: 更新缓存并处理时间戳
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        if [ "${{ steps.check-cache.outputs.cache-hit }}" == "true" ]; then
-          echo "缓存命中，更新时间戳..."
-          cd openwrt
-          find staging_dir -type d -name "stamp" -not -path "*target*" | while read -r DIR; do
-            find "$DIR" -type f -exec touch {} +
-          done
-          echo "时间戳更新完毕!"
-        else
-          echo "缓存未命中，开始主动清理相关的旧缓存..."
-          
-          # 清理 Go 模块缓存，防止污染
-          rm -rf openwrt/dl/go-mod-cache
-
-          # 构造用于搜索的 key 前缀
-          CACHE_PREFIX="${{ runner.os }}-${{ github.workflow }}-${{ env.TAG2 }}-"
-          
-          echo "正在搜索前缀为 '${CACHE_PREFIX}' 的旧缓存..."
-          CACHE_LIST=$(gh cache list --key "$CACHE_PREFIX" | cut -f 1)
-          
-          if [ -n "$CACHE_LIST" ]; then
-            for CACHE_KEY in $CACHE_LIST; do
-              echo "删除旧缓存: $CACHE_KEY"
-              gh cache delete "$CACHE_KEY" 
-            done
-            echo "相关旧缓存清理完毕!"
-          else
-            echo "没有找到相关的旧缓存。"
-          fi
-        fi
-
+        ccache: true
+        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(env.CONFIG_FILE, '**/scripts-part*.sh') }}
+        prefix: ${{ env.OPENWRT_PATH }}
+    
     - name: 下载软件包
       id: package
       run: |
@@ -181,7 +149,7 @@ jobs:
       run: |
         cd openwrt
         echo -e "$(nproc) 线程编译"
-        make -j$(expr $(nproc) + 1) || make -j1 V=s
+        echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
         echo "compile-status=success" >> $GITHUB_ENV
         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
         [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
@@ -243,7 +211,7 @@ jobs:
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: immortalwrt_x86_64-${{ env.release_tag }}
+        tag_name: libwrt_jdc-ax6600-nss${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
