@@ -17,7 +17,7 @@ on:
       tag2:
         description: 'ImmortalWrt版本'
         required: false
-        default: 'v24.10.3'
+        default: 'v24.10.4'
 
 env:
   REPO_URL_IMM: https://github.com/immortalwrt/immortalwrt.git
