@@ -16,7 +16,7 @@ on:
         default: 'false'
 
 env:
-  REPO_URL_IMM: https://github.com/LiBwrt/openwrt-6.x
+  REPO_URL_IMM: https://github.com/m0eak/libwrt.git
   REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/axt1800.config
