@@ -32,6 +32,7 @@ declare -A REPOS=(
     ["https://github.com/sbwml/v2ray-geodata"]=""
     ["https://github.com/vernesong/OpenClash.git"]=""
     ["https://github.com/eamonxg/luci-theme-aurora"]=""
+    ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
