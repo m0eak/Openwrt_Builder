@@ -294,4 +294,9 @@ if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * e
   echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 
+if [ -e /usr/sbin/athena-led ];then
+  chmod +x /usr/sbin/athena-led
+  chmod +x /etc/init.d/athena_led
+fi
+
 exit 0
