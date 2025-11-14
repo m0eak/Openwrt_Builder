@@ -71,6 +71,9 @@ if [[ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq 1 || "$(grep -c "JDC-AX6600" $G
   rm package/kernel/mac80211/patches/nss/ath11k/999-902-ath11k-fix-WDS-by-disabling-nwds.patch && echo "删除patch1成功" || echo "删除patch1失败（可能文件不存在）"
   rm package/kernel/mac80211/patches/nss/subsys/999-775-wifi-mac80211-Changes-for-WDS-MLD.patch && echo "删除patch2成功" || echo "删除patch2失败（可能文件不存在）"
 
+  VERMAGIC=$(cat vermagic)
+  echo "VERMAGIC_FIX=${VERMAGIC}" >> $GITHUB_ENV
+
   ##修改vermagic
   if [ ! -s ./vermagic ]; then
     echo "none vermagic"
