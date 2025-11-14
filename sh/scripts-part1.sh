@@ -25,7 +25,8 @@ cat $GITHUB_OUTPUT
 if [[ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq 1 || "$(grep -c "JDC-AX6600" $GITHUB_OUTPUT)" -eq 1 ]]; then
   
   #修改tailscale
-  sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile | echo "tailscale修改完成"
+  ls ./feeds/packages/net/tailscale/
+  sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' ./feeds/packages/net/tailscale/Makefile && echo "tailscale修改完成"
 
   # 定义kernel-6.12文件的路径
   KERNEL_FILE="./target/linux/generic/kernel-6.12"
