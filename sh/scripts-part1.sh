@@ -22,7 +22,7 @@ KERNEL=${KERNEL_NAME#k} && echo "当前Kernel：$KERNEL"
 VERSION=${TAG#v} && echo "op当前版本：$VERSION"
 VERSION2=${TAG2#v} && echo "imm当前版本：$VERSION2"
 cat $GITHUB_OUTPUT
-if [ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq '1' ];then
+if [[ "$(grep -c "AXT-1800" $GITHUB_OUTPUT)" -eq 1 || "$(grep -c "JDC-AX6600" $GITHUB_OUTPUT)" -eq 1 ]]; then
   # 定义kernel-6.12文件的路径
   KERNEL_FILE="./target/linux/generic/kernel-6.12"
   cat $KERNEL_FILE
