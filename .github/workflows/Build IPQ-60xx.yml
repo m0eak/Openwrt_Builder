@@ -1,4 +1,4 @@
-name: Build Router Firmware
+name: Build IPQ-60xx
 
 on:
   schedule:
