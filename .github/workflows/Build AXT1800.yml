@@ -14,7 +14,10 @@ on:
         description: '是否编译docker'
         required: false
         default: 'false'
-
+      tag:
+        description: 'ImmortalWrt版本'
+        required: false
+        default: '6.12.57'
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
   REPO_BRANCH: 24.10-6.12
@@ -75,7 +78,7 @@ jobs:
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
           echo "WORKFLOW_NAME=AXT-1800" | tr ' ' '_' >> $GITHUB_OUTPUT
-          echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
+          echo "TAG=${{ github.event.inputs.tag }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
     - name: 克隆源代码
@@ -86,14 +89,13 @@ jobs:
         git clone $REPO_URL --single-branch openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        
+        git fetch --tags # 获取最新的标签
+        git checkout "tags/${TAG}" || git checkout "${TAG}" # 尝试检出标签，如果失败则尝试检出分支
         # GitHub Action 移除国内下载源
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
           if [ -f "$PROJECT_MIRRORS_FILE" ]; then
             sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
           fi
-        
-        git fetch --tags # 获取最新的标签
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         
     - name: 加载自定义源
