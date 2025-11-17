@@ -35,6 +35,7 @@ declare -A REPOS=(
     ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
     ["https://github.com/sirpdboy/luci-app-netspeedtest.git"]="js"
     ["https://github.com/asvow/luci-app-tailscale.git"]=""
+    ["https://github.com/lwb1978/openwrt-gecoosac.git"]=""
     
 )
 
