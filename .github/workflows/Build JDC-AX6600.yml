@@ -15,7 +15,7 @@ on:
         required: false
         default: 'false'
       tag:
-        description: 'ImmortalWrt版本'
+        description: '内核版本'
         required: false
         default: '6.12.57'
 
