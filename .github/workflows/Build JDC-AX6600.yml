@@ -1,8 +1,8 @@
 name: Build JDC-AX6600
 
 on:
-  schedule:
-    - cron: '0 16 */5 * *'
+#  schedule:
+#    - cron: '0 16 */5 * *'
   repository_dispatch:
   workflow_dispatch:
     inputs:

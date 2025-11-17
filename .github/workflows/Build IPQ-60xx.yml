@@ -1,8 +1,8 @@
-name: Build AXT-1800
+name: Build Router Firmware
 
 on:
-#  schedule:
-#    - cron: '0 16 */6 * *'
+  schedule:
+    - cron: '0 16 */6 * *' # 统一的定时任务，每6天的16点执行
   repository_dispatch:
   workflow_dispatch:
     inputs:
@@ -23,7 +23,6 @@ env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
   REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE: ./config/axt1800.config
   CONFIG_FILE_DOCKER: ./config/docker.config
   CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
@@ -38,11 +37,24 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        include:
+          - device: AXT-1800
+            config_file: './config/axt1800.config'
+            workflow_name: 'AXT-1800'
+            release_prefix: 'gl-axt1800-nss' 
+          - device: JDC-AX6600
+            config_file: './config/jdcax6600.config'
+            workflow_name: 'JDC-AX6600'
+            release_prefix: 'jdc-ax6600-nss' 
+    name: Build ${{ matrix.device }} 
+
     steps:
     - name: Checkout
       uses: actions/checkout@main
 
-    - name: "Optimize Disk Space"
+    - name: "Optimize Disk Space" 
       uses: "hugoalh/disk-space-optimizer-ghaction@v0.8.1"
       with:
         operate_sudo: "True"
@@ -63,24 +75,23 @@ jobs:
         npm_clean: "True"
         os_swap: "True"
 
-
     - name: 初始化环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-          sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
-          sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-          sudo -E apt-get -y update
-          sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-          sudo -E systemctl daemon-reload
-          sudo -E apt-get -y autoremove --purge
-          sudo -E apt-get -y clean
-          sudo timedatectl set-timezone "$TZ"
-          sudo mkdir -p /workdir
-          sudo chown $USER:$GROUPS /workdir
-          echo "WORKFLOW_NAME=AXT-1800" | tr ' ' '_' >> $GITHUB_OUTPUT
-          echo "TAG=${{ github.event.inputs.tag }}" | tr ' ' '_' >> $GITHUB_ENV
-
+        sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
+        sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+        sudo -E apt-get -y update
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo -E systemctl daemon-reload
+        sudo -E apt-get -y autoremove --purge
+        sudo -E apt-get -y clean
+        sudo timedatectl set-timezone "$TZ"
+        sudo mkdir -p /workdir
+        sudo chown $USER:$GROUPS /workdir
+        # 将 WORKFLOW_NAME 和 TAG 设置到 GITHUB_ENV，这样后面的步骤就能访问到啦！喵～
+        echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
+        echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
 
     - name: 克隆源代码
       working-directory: /workdir
@@ -94,15 +105,14 @@ jobs:
         git checkout "tags/${TAG}" || git checkout "${TAG}" # 尝试检出标签，如果失败则尝试检出分支
         # GitHub Action 移除国内下载源
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
-          if [ -f "$PROJECT_MIRRORS_FILE" ]; then
-            sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
-          fi
+        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
+          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
+        fi
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
-        
+
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=AXT-1800" | tr ' ' '_' >> $GITHUB_OUTPUT
-        cat $GITHUB_OUTPUT
+        # 这里不再重复设置 WORKFLOW_NAME 到 $GITHUB_OUTPUT，因为它已经通过 GITHUB_ENV 设置好了
         cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
@@ -110,7 +120,6 @@ jobs:
         ./scripts/feeds update -a
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    #- name: 更新源
     #  run: cd openwrt && ./scripts/feeds update -a
 
     - name: 安装源
@@ -118,34 +127,32 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=AXT-1800" | tr ' ' '_' >> $GITHUB_OUTPUT
-        cat $GITHUB_OUTPUT
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/
         [ -e files ] && mv ./files openwrt/files
-        [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
         echo "当前diffconfig:"
-        ./scripts/diffconfig.sh    
+        ./scripts/diffconfig.sh
 
-    - name: Cache Toolchain(缓存工具链)
+    - name: Cache Toolchain(缓存工具链) 
       uses: HiGarfield/cachewrtbuild@main
       if: env.CACHE_TOOLCHAIN != 'false'
       with:
         ccache: true
-        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(env.CONFIG_FILE, '**/scripts-part*.sh') }}
+        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(matrix.config_file, '**/scripts-part*.sh') }}
         prefix: ${{ env.OPENWRT_PATH }}
-    
+
     - name: 下载软件包
       id: package
       run: |
-         cd openwrt
-         make download -j8
-         find dl -size -1024c -exec ls -l {} \;
-         find dl -size -1024c -exec rm -f {} \;
+        cd openwrt
+        make download -j8
+        find dl -size -1024c -exec ls -l {} \;
+        find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
       id: compile
@@ -197,24 +204,30 @@ jobs:
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
         echo "生成发布标签..."
+        # WORKFLOW_NAME 现在是从 GITHUB_ENV 获取的，所以可以直接使用
         CLEANED_WORKFLOW_NAME=$(echo "$WORKFLOW_NAME" | tr -c '[:alnum:]_' '-')
-        CLEANED_TAG2=$(echo "$TAG2" | tr -c '[:alnum:].-' '-')
+        # 修复了原代码中 TAG2 未定义的问题，改为使用输入的 tag
+        INPUT_TAG="${{ github.event.inputs.tag }}"
+        CLEANED_TAG2=$(echo "$INPUT_TAG" | tr -c '[:alnum:].-' '-')
         BASE_TAG="${CLEANED_WORKFLOW_NAME}-${CLEANED_TAG2}"
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
         RELEASE_TAG="${BASE_TAG}-${DATE_SUFFIX}"
+        
         if [ -z "$RELEASE_TAG" ]; then
             echo "错误：生成的发布标签为空。请检查输入参数和工作流程名称。"
             exit 1
         fi
-        echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-        touch release.txt
+        
+        # 将生成的 release_tag 设置到 GITHUB_ENV，供下一个步骤使用
+        echo "release_tag=${RELEASE_TAG}" >> $GITHUB_ENV
+        touch release.txt # 保留原有的文件创建步骤
         echo "tag=success" >> $GITHUB_OUTPUT
-        echo "生成的发布标签: $RELEASE_TAG"
+        echo "生成的发布标签: ${RELEASE_TAG}"
 
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: libwrt_gl-axt1800-nss${{ env.release_tag }}
+        tag_name: libwrt_${{ matrix.release_prefix }}${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
@@ -224,7 +237,7 @@ jobs:
       with:
         retain_days: 5
         keep_minimum_runs: 5
-  
+
     - name: Remove old Releases
       uses: dev-drprasad/delete-older-releases@v0.1.0
       if: env.UPLOAD_RELEASE == 'true' && !cancelled()
@@ -233,5 +246,3 @@ jobs:
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  
-  
