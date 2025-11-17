@@ -55,8 +55,8 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
         sed -i 's/192.168.1.1/192.168.8.1/g' package/base-files/files/bin/config_generate
         echo "AXT-1800 IP 修改为 192.168.8.1"
     elif [[ "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
-        sed -i 's/192.168.1.1/192.168.10.1/g' package/base-files/files/bin/config_generate
-        echo "JDC-AX6600 IP 修改为 192.168.10.1"
+        sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
+        echo "JDC-AX6600 IP 修改为 192.168.100.1"
     fi
 
     # 更新Golang版本
