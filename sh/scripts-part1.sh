@@ -11,7 +11,7 @@
 #
 
 # --- 调试信息：打印所有可能用到的环境变量 ---
-echo "--- 脚本开始执行，正在检查环境变量喵～ ---"
+echo "--- 脚本开始执行，正在检查环境变量 ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME" # 这是最重要的判断依据！
 echo "TAG (from libwrt): $TAG"
 echo "TAG2 (from immortalwrt): $TAG2"
@@ -23,7 +23,7 @@ echo "------------------------------------------"
 
 # --- 逻辑块 1: 处理 AXT-1800 和 JDC-AX6600 ---
 if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
-    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 libwrt 的特定修改喵～"
+    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 libwrt 的特定修改"
 
     # 修改tailscale
     ls ./feeds/packages/net/tailscale/
@@ -83,7 +83,7 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
 
 # --- 逻辑块 2: 处理 x86 immortalwrt ---
 elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
-    echo ">>> 检测到: $WORKFLOW_NAME。开始执行 x86 immortalwrt 的特定修改喵～"
+    echo ">>> 检测到: $WORKFLOW_NAME。开始执行 x86 immortalwrt 的特定修改"
     
     # immortalwrt 工作流定义了 TAG2，所以 VERSION2 现在是有效的！
     VERSION2=${TAG2#v}
@@ -122,12 +122,12 @@ elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
 
 # --- 逻辑块 3: 处理 TR-3000 ---
 elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
-    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 TR-3000 的特定修改喵～"
+    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 TR-3000 的特定修改"
     sed -i 's/192.168.6.1/192.168.100.209/g' package/base-files/files/bin/config_generate
     echo "TR-3000 IP 修改为 192.168.100.209"
 
 else
-    echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改喵～"
+    echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
 
-echo "--- DIY Part 1 脚本执行完毕喵～ ---"
+echo "--- DIY Part 1 脚本执行完毕 ---"
