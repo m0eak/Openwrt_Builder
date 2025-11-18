@@ -43,11 +43,9 @@ jobs:
           - device: AXT-1800
             config_file: './config/axt1800.config'
             workflow_name: 'AXT-1800'
-            release_prefix: 'gl-axt1800-nss' 
           - device: JDC-AX6600
             config_file: './config/jdcax6600.config'
             workflow_name: 'JDC-AX6600'
-            release_prefix: 'jdc-ax6600-nss' 
     name: Build ${{ matrix.device }} 
 
     steps:
@@ -204,30 +202,25 @@ jobs:
       if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
       run: |
         echo "生成发布标签..."
-        # WORKFLOW_NAME 现在是从 GITHUB_ENV 获取的，所以可以直接使用
-        CLEANED_WORKFLOW_NAME=$(echo "$WORKFLOW_NAME" | tr -c '[:alnum:]_' '-')
-        # 修复了原代码中 TAG2 未定义的问题，改为使用输入的 tag
+        # 直接使用 WORKFLOW_NAME 和输入的 tag 来构建标签，不再需要复杂的清理
+        # 格式：设备名-内核版本-日期
         INPUT_TAG="${{ github.event.inputs.tag }}"
-        CLEANED_TAG2=$(echo "$INPUT_TAG" | tr -c '[:alnum:].-' '-')
-        BASE_TAG="${CLEANED_WORKFLOW_NAME}-${CLEANED_TAG2}"
-        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="${BASE_TAG}-${DATE_SUFFIX}"
-        
-        if [ -z "$RELEASE_TAG" ]; then
-            echo "错误：生成的发布标签为空。请检查输入参数和工作流程名称。"
+        if [ -z "$INPUT_TAG" ]; then
+            echo "错误：内核版本标签 (tag) 为空！"
             exit 1
         fi
         
-        # 将生成的 release_tag 设置到 GITHUB_ENV，供下一个步骤使用
-        echo "release_tag=${RELEASE_TAG}" >> $GITHUB_ENV
-        touch release.txt # 保留原有的文件创建步骤
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="$WORKFLOW_NAME-$INPUT_TAG-$DATE_SUFFIX"
+        
+        echo "生成的发布标签: $RELEASE_TAG"
+        echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
         echo "tag=success" >> $GITHUB_OUTPUT
-        echo "生成的发布标签: ${RELEASE_TAG}"
 
     - name: Release Firmware
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: libwrt_${{ matrix.release_prefix }}${{ env.release_tag }}
+        tag_name: ${{ env.release_tag }}
         files: ${{ env.FIRMWARE }}/*
         body: |
           源码：${{ env.REPO_URL_IMM }}
