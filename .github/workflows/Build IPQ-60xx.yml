@@ -76,7 +76,6 @@ jobs:
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
-        # 将 WORKFLOW_NAME 和 TAG 设置到 GITHUB_ENV，这样后面的步骤就能访问到啦！喵～
         echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
         echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
 
