@@ -98,7 +98,6 @@ jobs:
 
     - name: 加载自定义源
       run: |
-        # 这里不再重复设置 WORKFLOW_NAME 到 $GITHUB_OUTPUT，因为它已经通过 GITHUB_ENV 设置好了
         cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
