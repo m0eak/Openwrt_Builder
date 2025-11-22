@@ -17,7 +17,7 @@ on:
       tag:
         description: '内核版本'
         required: false
-        default: '6.12.57'
+        default: '6.12.58'
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
