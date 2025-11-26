@@ -73,13 +73,19 @@ jobs:
         lsb_release -a
         echo "================================================="
 
-    - name: 释放磁盘空间
+    - name: 磁盘清理
       run: |
         echo "清理前磁盘空间："
         df -hT
-        # 仅删除最占空间的大型预装软件
-        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+        
+        echo "开始清理，释放更多空间..."
+        sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+        sudo rm -rf /usr/share/swift /usr/local/.ghcup
+        
         sudo docker image prune --all --force
+        
+        sudo rm -rf /opt/hostedtoolcache/CodeQL
+        
         echo "清理后磁盘空间："
         df -hT
 
