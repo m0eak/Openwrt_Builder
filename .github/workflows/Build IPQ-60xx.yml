@@ -105,7 +105,7 @@ jobs:
       run: |
         df -hT $PWD
         REPO_URL=$REPO_URL_IMM
-        git clone $REPO_URL --single-branch openwrt
+        git clone $REPO_URL --single-branch --depth 1 openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
         git fetch --tags # 获取最新的标签
