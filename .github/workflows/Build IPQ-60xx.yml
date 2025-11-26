@@ -52,6 +52,27 @@ jobs:
     - name: Checkout
       uses: actions/checkout@main
 
+    - name: 查看运行环境配置
+      run: |
+        echo "================================================="
+        echo "           GitHub Actions 运行环境详情"
+        echo "================================================="
+        echo "CPU 信息:"
+        lscpu
+        echo "CPU 线程数: $(nproc)"
+        echo "-------------------------------------------------"
+        echo "内存信息:"
+        free -h
+        echo "Swap 分区大小: $(grep SwapTotal /proc/meminfo | awk '{print $2/1024/1024 " GB"}')"
+        echo "-------------------------------------------------"
+        echo "磁盘空间信息:"
+        df -hT
+        echo "-------------------------------------------------"
+        echo "操作系统信息:"
+        uname -a
+        lsb_release -a
+        echo "================================================="
+
     - name: 释放磁盘空间
       run: |
         echo "清理前磁盘空间："
