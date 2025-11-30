@@ -1,8 +1,8 @@
 name: Build IPQ-60xx
 
 on:
-  schedule:
-    - cron: '0 16 */6 * *' # 统一的定时任务，每6天的16点执行
+#  schedule:
+#    - cron: '0 16 */6 * *'
   repository_dispatch:
   workflow_dispatch:
     inputs:
@@ -23,21 +23,18 @@ env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
   REPO_BRANCH: 24.10-6.12
   FEEDS_CONF: feeds.conf.default
-  CONFIG_FILE_DOCKER: ./config/docker.config
-  CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
   DEFAULT_SETTING: ./default-settings-m0eak
-  UPLOAD_BIN_DIR: true
-  UPLOAD_FIRMWARE: true
-  UPLOAD_RELEASE: true
   CACHE_TOOLCHAIN: true
   TZ: Asia/Shanghai
 
 jobs:
   build:
+    name: 编译 ${{ matrix.device }}
     runs-on: ubuntu-22.04
     strategy:
+      fail-fast: false
       matrix:
         include:
           - device: AXT-1800
@@ -46,10 +43,9 @@ jobs:
           - device: JDC-AX6600
             config_file: './config/jdcax6600.config'
             workflow_name: 'JDC-AX6600'
-    name: Build ${{ matrix.device }} 
-
+    
     steps:
-    - name: Checkout
+    - name: 检出仓库代码
       uses: actions/checkout@main
 
     - name: 查看运行环境配置
@@ -77,179 +73,167 @@ jobs:
       run: |
         echo "清理前磁盘空间："
         df -hT
-        
         echo "开始清理，释放更多空间..."
         sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
         sudo rm -rf /usr/share/swift /usr/local/.ghcup
-        
         sudo docker image prune --all --force
-        
         sudo rm -rf /opt/hostedtoolcache/CodeQL
-        
         echo "清理后磁盘空间："
         df -hT
 
-    - name: 初始化环境
+    - name: 初始化编译环境
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        sudo rm -rf /usr/share/dotnet /etc/apt/sources.list.d /usr/local/lib/android $AGENT_TOOLSDIRECTORY
-        sudo -E apt-get -y purge azure-cli ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-        sudo -E apt-get -y update
+        # 移除与编译无关的预装包
+        sudo rm -rf /etc/apt/sources.list.d/*
+        sudo -E apt-get -yqq update
+        sudo -E apt-get -yqq purge azure-cli* ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
+        # 安装编译依赖
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo -E systemctl daemon-reload
-        sudo -E apt-get -y autoremove --purge
-        sudo -E apt-get -y clean
+        sudo -E apt-get -yqq autoremove --purge
+        sudo -E apt-get -yqq clean
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
         echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
 
-    - name: 克隆源代码
+    - name: 克隆固件源代码
       working-directory: /workdir
       run: |
-        df -hT $PWD
-        REPO_URL=$REPO_URL_IMM
-        git clone $REPO_URL --single-branch --depth 1 openwrt
+        git clone $REPO_URL_IMM --single-branch --depth 1 openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        git fetch --tags # 获取最新的标签
-        git checkout "${TAG}" 
-        # GitHub Action 移除国内下载源
+        git fetch --tags
+        git checkout "${TAG}"
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
         if [ -f "$PROJECT_MIRRORS_FILE" ]; then
           sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
         fi
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
-    - name: 加载自定义源
+    - name: 加载 Feeds 和自定义脚本 (Part 1)
       run: |
-        cat $GITHUB_ENV
-        [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
-        chmod +x $DIY_P1_SH
         cd openwrt
+        [ -e $GITHUB_WORKSPACE/$FEEDS_CONF ] && cp $GITHUB_WORKSPACE/$FEEDS_CONF ./feeds.conf.default
         ./scripts/feeds update -a
+        chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    #  run: cd openwrt && ./scripts/feeds update -a
-
-    - name: 安装源
+    - name: 安装 Feeds
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: 加载自定义配置
+    - name: 加载自定义配置 (Part 2)
       run: |
-        [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
-        ls openwrt/package/
-        [ -e files ] && mv ./files openwrt/files
+        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] && mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
+        [ -d $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files openwrt/files
         [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
-        chmod +x $DIY_P2_SH
         cd openwrt
+        chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
-        echo "当前diffconfig:"
+        echo "当前 diffconfig:"
         ./scripts/diffconfig.sh
 
-    - name: Cache Toolchain(缓存工具链) 
+    - name: 缓存工具链
       uses: HiGarfield/cachewrtbuild@main
       if: env.CACHE_TOOLCHAIN != 'false'
       with:
         ccache: true
-        mixkey: ${{ github.workflow }}-${{ env.REPO_BRANCH }}-${{ hashFiles(matrix.config_file, '**/scripts-part*.sh') }}
+        mixkey: ${{ github.workflow }}-${{ matrix.workflow_name }}-${{ hashFiles(matrix.config_file, '**/scripts-part*.sh') }}
         prefix: ${{ env.OPENWRT_PATH }}
 
     - name: 下载软件包
-      id: package
       run: |
         cd openwrt
-        make download -j8
-        find dl -size -1024c -exec ls -l {} \;
+        make download -j$(nproc) || make download -j1 V=s
         find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
-      id: compile
       run: |
         cd openwrt
-        echo -e "$(nproc) 线程编译"
-        echo "y" | make -j$(expr $(nproc) + 1) || echo "y" | make -j1 V=s
-        echo "compile-status=success" >> $GITHUB_ENV
-        grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-        [ -s DEVICE_NAME ] && echo "DEVICE_NAME=_$(cat DEVICE_NAME)" >> $GITHUB_ENV
-        echo "FILE_DATE=_$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
-        echo "compile=success" >> $GITHUB_OUTPUT
-        if [ -s DEVICE_NAME ]; then
-          echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
-        fi
-        echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+        echo "使用 $(nproc) 线程进行编译..."
+        make -j$(expr $(nproc) + 1) || make -j1 V=s
 
-    - name: 检查空间使用情况
-      if: (!cancelled())
-      run: df -hT
+    - name: 编译后清理临时文件
+      if: success()
+      run: |
+        echo "编译完成，开始清理临时编译目录..."
+        cd openwrt
+        rm -rf build_dir tmp
+        echo "临时文件清理完毕！"
 
-    - name: 上传 bin 目录
-      uses: actions/upload-artifact@main
-      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: OpenWrt_bin_${{ steps.compile.outputs.device-name }}_${{ steps.compile.outputs.file-date }}
-        path: openwrt/bin
-
-    - name: 整理文件
+    - name: 整理固件文件
       id: organize
-      if: env.UPLOAD_FIRMWARE == 'true' && !cancelled()
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "status=success" >> $GITHUB_ENV
-        echo "organize=success" >> $GITHUB_OUTPUT
-        cat $GITHUB_ENV
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
 
-    - name: 上传固件目录
+    - name: 上传固件产物
       uses: actions/upload-artifact@main
-      if: steps.organize.outputs.organize == 'success' && !cancelled()
       with:
-        name: OpenWrt_firmware${{ env.DEVICE_NAME }}${{ env.FILE_DATE }}
-        path: ${{ env.FIRMWARE }}
+        name: firmware-${{ matrix.device }}
+        path: ${{ env.FIRMWARE_PATH }}
 
-    - name: 生成发布标签
-      id: tag
-      if: steps.compile.outputs.compile == 'success' && env.UPLOAD_RELEASE == 'true'
+
+  publish_release:
+    name: 合并并发布固件
+    needs: build 
+    runs-on: ubuntu-22.04
+    if: success() # 仅在 build 任务全部成功时运行
+
+    steps:
+    - name: 下载所有固件产物
+      uses: actions/download-artifact@v4
+      with:
+        path: all-firmware
+
+    - name: 生成统一发布标签和内容
+      id: release-meta
       run: |
-        echo "生成发布标签..."
-        # 直接使用 WORKFLOW_NAME 和输入的 tag 来构建标签，不再需要复杂的清理
-        # 格式：设备名-内核版本-日期
-        INPUT_TAG="${{ github.event.inputs.tag }}"
-        if [ -z "$INPUT_TAG" ]; then
-            echo "错误：内核版本标签 (tag) 为空！"
-            exit 1
-        fi
-        
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="$WORKFLOW_NAME-$INPUT_TAG-$DATE_SUFFIX"
-        
-        echo "生成的发布标签: $RELEASE_TAG"
+        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag }}-${DATE_SUFFIX}"
+        echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-        echo "tag=success" >> $GITHUB_OUTPUT
 
-    - name: Release Firmware
+        echo "### 固件下载" > release-body.md
+        echo "" >> release-body.md
+        echo "本次发布包含以下设备的固件：" >> release-body.md
+        for dir in all-firmware/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "- **$DEVICE_NAME**" >> release-body.md
+        done
+        echo "" >> release-body.md
+        echo "**源码仓库:** \`${{ env.REPO_URL_IMM }}\`" >> release-body.md
+        echo "**源码分支:** \`${{ env.REPO_BRANCH }}\`" >> release-body.md
+        echo "" >> release-body.md
+        echo "---" >> release-body.md
+        echo "### 文件列表" >> release-body.md
+        if command -v tree &> /dev/null; then
+            tree all-firmware >> release-body.md
+        else
+            ls -R all-firmware >> release-body.md
+        fi
+
+    - name: 创建统一 Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.release_tag }}
-        files: ${{ env.FIRMWARE }}/*
-        body: |
-          源码：${{ env.REPO_URL_IMM }}
+        body_path: release-body.md
+        files: all-firmware/*/*
 
-    - name: Delete workflow runs
-      uses: GitRML/delete-workflow-runs@main
-      with:
-        retain_days: 5
-        keep_minimum_runs: 5
-
-    - name: Remove old Releases
+    - name: 清理旧的 Release
       uses: dev-drprasad/delete-older-releases@v0.1.0
-      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
       with:
         keep_latest: 10
         delete_tags: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 清理旧的工作流运行记录
+      uses: GitRML/delete-workflow-runs@main
+      with:
+        retain_days: 5
+        keep_minimum_runs: 5
