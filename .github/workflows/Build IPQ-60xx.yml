@@ -73,16 +73,16 @@ jobs:
       uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
       with:
         operate_sudo: "True"
+        general_include: ".+"
         general_exclude: |-
           ^GCC$
           ^G\+\+$
           Clang
           LLVM
+        docker_prune: "True"
         docker_clean: "True"
-        large_packages_clean: "True"
-        dotnet_clean: "True"
-        android_clean: "True"
-        haskell_clean: "True"
+        apt_prune: "True"
+        apt_clean: "True"
 
     - name: 磁盘清理2
       run: |
