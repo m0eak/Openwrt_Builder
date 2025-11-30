@@ -70,7 +70,7 @@ jobs:
         echo "================================================="
 
     - name: 磁盘清理
-      uses: hugoalh/dissk-space-optimizer-ghaction@v0.8.1
+      uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
       with:
         operate_sudo: "True"
         general_exclude: |-
