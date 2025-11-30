@@ -70,6 +70,21 @@ jobs:
         echo "================================================="
 
     - name: 磁盘清理
+      uses: hugoalh/dissk-space-optimizer-ghaction@v0.8.1
+      with:
+        operate_sudo: "True"
+        general_exclude: |-
+          ^GCC$
+          ^G\+\+$
+          Clang
+          LLVM
+        docker_clean: "True"
+        large_packages_clean: "True"
+        dotnet_clean: "True"
+        android_clean: "True"
+        haskell_clean: "True"
+
+    - name: 磁盘清理2
       run: |
         echo "清理前磁盘空间："
         df -hT
