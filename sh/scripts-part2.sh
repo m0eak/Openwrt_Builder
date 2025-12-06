@@ -17,9 +17,8 @@ TARGET_DIR="$PWD/package"
 # 定义要克隆的仓库和分支
 declare -A REPOS=(
     ["https://github.com/sbwml/luci-app-mosdns"]=""  # 使用默认分支
-    ["https://github.com/breeze303/luci-app-lucky.git"]="" # 使用默认分支
     ["https://github.com/chenmozhijin/turboacc"]="" # 使用默认分支
-    ["https://github.com/breeze303/luci-app-lucky"]="" # 使用默认分支
+    ["https://github.com/gdy666/luci-app-lucky"]="" # 使用默认分支
     ["https://github.com/m0eak/fancontrol"]="" # 使用默认分支
     ["https://github.com/animegasan/luci-app-wolplus"]="" # 使用默认分支
     ["https://github.com/m0eak/luci-theme-asus"]="js"  # 指定 js 分支
