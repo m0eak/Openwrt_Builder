@@ -31,6 +31,7 @@ declare -A REPOS=(
     ["https://github.com/sbwml/v2ray-geodata"]=""
     ["https://github.com/vernesong/OpenClash.git"]=""
     ["https://github.com/eamonxg/luci-theme-aurora"]=""
+    ["https://github.com/eamonxg/luci-app-aurora-config"]=""
     ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
     ["https://github.com/sirpdboy/luci-app-netspeedtest.git"]="js"
     ["https://github.com/asvow/luci-app-tailscale.git"]=""
