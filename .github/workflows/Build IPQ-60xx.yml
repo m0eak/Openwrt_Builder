@@ -112,7 +112,12 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
-        echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+        # 如果 inputs.tag 为空，则回退到 REPO_BRANCH 作为默认 TAG
+        if [ -n "${{ github.event.inputs.tag }}" ]; then
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+        else
+          echo "TAG=$REPO_BRANCH" >> $GITHUB_ENV
+        fi
 
     - name: 克隆固件源代码
       working-directory: /workdir
