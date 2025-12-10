@@ -2,7 +2,7 @@ name: Build IPQ-60xx
 
 on:
   schedule:
-    - cron: '0 16 */6 * *'
+    - cron: '0 16 */3 * *'
   repository_dispatch:
   workflow_dispatch:
     inputs:
