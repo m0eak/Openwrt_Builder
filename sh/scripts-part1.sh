@@ -15,8 +15,6 @@ echo "--- 脚本开始执行，正在检查环境变量 ---"
 echo "WORKFLOW_NAME: $WORKFLOW_NAME" # 这是最重要的判断依据！
 echo "TAG (from libwrt): $TAG"
 echo "TAG2 (from immortalwrt): $TAG2"
-# KERNEL_NAME 在所有工作流中都未定义，所以注释掉相关逻辑
-# echo "KERNEL_NAME: $KERNEL_NAME"
 echo "------------------------------------------"
 
 # --- 根据 WORKFLOW_NAME 执行不同的逻辑 ---
