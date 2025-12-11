@@ -227,57 +227,31 @@ jobs:
     name: 合并并发布固件
     needs: build
     runs-on: ubuntu-22.04
-    if: success() # 仅在 build 任务全部成功时运行
+    if: success()
 
     steps:
     - name: 下载所有固件产物
       uses: actions/download-artifact@v4
       with:
-        path: all-firmware
+        path: all-artifacts
 
     - name: 重命名固件文件以避免冲突
       run: |
         echo "开始重命名通用文件以防止上传冲突..."
-        # 遍历所有下载的设备固件目录
-        for dir in all-firmware/firmware-*; do
-          # 提取设备名，例如 "AXT-1800"
+        for dir in all-artifacts/firmware-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
           echo "正在处理设备: $DEVICE_NAME"
-          
-          # 进入该设备目录
           cd "$dir"
-          
-          # 重命名通用文件
           for file in version.buildinfo sha256sums profiles.json config.buildinfo feeds.buildinfo; do
             if [ -f "$file" ]; then
               mv "$file" "${DEVICE_NAME}-${file}"
               echo "  重命名: $file -> ${DEVICE_NAME}-${file}"
             fi
           done
-          
-          # 关键一步：更新 sha256sums 文件内容，使其指向新的固件文件名
-          # (这一步原脚本没有，但对于保持校验和有效性很重要)
+          # 顺手把 sha256sums 里的文件名引用也修一下（可选）
           if [ -f "${DEVICE_NAME}-sha256sums" ]; then
-            # 使用 sed 在每一行的开头添加设备名前缀
-            # sed -i "s|  |  ${DEVICE_NAME}-|" "${DEVICE_NAME}-sha256sums"
-            # 上面的命令太简单，用更可靠的循环
-            temp_file=$(mktemp)
-            while IFS= read -r line; do
-                checksum=$(echo "$line" | awk '{print $1}')
-                original_filename=$(echo "$line" | awk '{print $2}' | sed 's/^\*//') # 移除可能存在的星号
-                # 只有 manifest 和 bin/ubi/itb 文件不需要加前缀，因为它们本身就是唯一的
-                if [[ "$original_filename" == *.manifest || "$original_filename" == *.bin || "$original_filename" == *.ubi || "$original_filename" == *.itb ]]; then
-                    echo "$line" >> "$temp_file"
-                else
-                    # 对于 buildinfo 等文件，它们已经被重命名了，所以 sha256sums 里的引用也要改
-                    echo "$checksum  *${DEVICE_NAME}-${original_filename}" >> "$temp_file"
-                fi
-            done < "${DEVICE_NAME}-sha256sums"
-            # mv "$temp_file" "${DEVICE_NAME}-sha256sums"
-            # 更新sha256sums逻辑太复杂且易错，对于多数用户，重命名文件本身已足够。暂时简化。
+            sed -i "s/ \*/ ${DEVICE_NAME}-/" "${DEVICE_NAME}-sha256sums"
           fi
-          
-          # 返回上一级目录
           cd ../..
         done
         echo "所有文件重命名完毕！"
@@ -285,14 +259,11 @@ jobs:
     - name: 生成统一发布标签和内容
       id: release-meta
       run: |
-        # --- 生成 Release 标签 (恢复原逻辑) ---
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        # 直接使用 inputs.tag，不再进行回退处理
-        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag }}-${DATE_SUFFIX}"
+        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag || '6.12.57' }}-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-
-        # --- 生成 Release Body ---
+        
         echo "### 固件下载" > release-body.md
         echo "" >> release-body.md
         echo "本次发布包含以下设备的固件：" >> release-body.md
@@ -302,21 +273,26 @@ jobs:
         done
         echo "" >> release-body.md
         echo "**源码仓库:** \`${{ env.REPO_URL_IMM }}\`" >> release-body.md
-        # 源码分支/标签也恢复为直接使用 inputs.tag
-        echo "**源码分支/标签:** \`${{ github.event.inputs.tag }}\`" >> release-body.md
+        echo "**源码分支:** \`${{ env.REPO_BRANCH }}\`" >> release-body.md
         echo "" >> release-body.md
         echo "---" >> release-body.md
         
-        # --- 生成插件列表 ---
-        echo "### 插件列表" >> release-body.md
-        cat all-artifacts/package-list-*/packages.txt | sort -u | sed 's/^/- /' >> release-body.md
+        echo "### 插件列表详情" >> release-body.md
+        # 遍历每个设备的插件列表目录
+        for dir in all-artifacts/package-list-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          
+          echo "" >> release-body.md
+          echo "#### 🔌 $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
+        done
 
     - name: 创建统一 Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ env.release_tag }}
         body_path: release-body.md
-        files: all-firmware/*/* 
+        files: all-artifacts/firmware-*/*
 
     - name: 清理旧的 Release
       uses: dev-drprasad/delete-older-releases@v0.1.0
