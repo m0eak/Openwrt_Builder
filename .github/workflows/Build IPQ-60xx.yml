@@ -162,11 +162,9 @@ jobs:
       working-directory: openwrt
       run: |
         echo "当前工作目录: $PWD"
-        echo "检查 .config 文件是否存在..."
-        ls -l .config || echo ".config 文件不存在！"
+        echo "正在提取已选中的插件列表..."
         
-        echo "正在提取插件列表..."
-        grep -o 'CONFIG_PACKAGE_luci-app-[^=]*' .config | \
+        grep -o 'CONFIG_PACKAGE_luci-app-[^=]*=y' .config | \
         sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' > $GITHUB_WORKSPACE/packages.txt || true
         
         echo "检查生成的文件内容："
@@ -174,10 +172,9 @@ jobs:
           cat $GITHUB_WORKSPACE/packages.txt
           echo "文件生成成功！"
         else
-          echo "警告：packages.txt 为空或未生成！"
+          echo "警告：packages.txt 为空！可能是没有选中任何 luci-app 插件。"
           echo "无插件信息" > $GITHUB_WORKSPACE/packages.txt
         fi
-
     - name: 上传插件列表产物
       uses: actions/upload-artifact@main
       with:
