@@ -122,11 +122,12 @@ jobs:
     - name: 克隆固件源代码
       working-directory: /workdir
       run: |
-        git clone $REPO_URL_IMM --single-branch --depth 1 openwrt
+        git clone -b "${TAG}" $REPO_URL_IMM --single-branch --depth 1 openwrt
+        
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
         git fetch --tags
-        git checkout "${TAG}"
+        
         PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
         if [ -f "$PROJECT_MIRRORS_FILE" ]; then
           sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
