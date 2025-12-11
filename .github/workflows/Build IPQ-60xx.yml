@@ -157,6 +157,21 @@ jobs:
         echo "当前 diffconfig:"
         ./scripts/diffconfig.sh
 
+    - name: 提取插件列表
+      id: extract-packages
+      working-directory: openwrt
+      run: |
+        echo "正在从 .config 文件中提取插件列表..."
+        grep -o 'CONFIG_PACKAGE_luci-app-[^=]*' .config | \
+        sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' > ../packages.txt
+        echo "插件列表已保存到 packages.txt 文件！"
+
+    - name: 上传插件列表产物
+      uses: actions/upload-artifact@main
+      with:
+        name: package-list-${{ matrix.device }}
+        path: packages.txt
+
     - name: 缓存工具链
       uses: HiGarfield/cachewrtbuild@main
       if: env.CACHE_TOOLCHAIN != 'false'
@@ -261,29 +276,31 @@ jobs:
     - name: 生成统一发布标签和内容
       id: release-meta
       run: |
+        # --- 生成 Release 标签 (恢复原逻辑) ---
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        # 直接使用 inputs.tag，不再进行回退处理
         RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag }}-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
 
+        # --- 生成 Release Body ---
         echo "### 固件下载" > release-body.md
         echo "" >> release-body.md
         echo "本次发布包含以下设备的固件：" >> release-body.md
-        for dir in all-firmware/firmware-*; do
+        for dir in all-artifacts/firmware-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
           echo "- **$DEVICE_NAME**" >> release-body.md
         done
         echo "" >> release-body.md
         echo "**源码仓库:** \`${{ env.REPO_URL_IMM }}\`" >> release-body.md
-        echo "**源码分支:** \`${{ env.REPO_BRANCH }}\`" >> release-body.md
+        # 源码分支/标签也恢复为直接使用 inputs.tag
+        echo "**源码分支/标签:** \`${{ github.event.inputs.tag }}\`" >> release-body.md
         echo "" >> release-body.md
         echo "---" >> release-body.md
-        echo "### 文件列表" >> release-body.md
-        if command -v tree &> /dev/null; then
-            tree all-firmware >> release-body.md
-        else
-            ls -R all-firmware >> release-body.md
-        fi
+        
+        # --- 生成插件列表 ---
+        echo "### 插件列表" >> release-body.md
+        cat all-artifacts/package-list-*/packages.txt | sort -u | sed 's/^/- /' >> release-body.md
 
     - name: 创建统一 Release
       uses: softprops/action-gh-release@v2
