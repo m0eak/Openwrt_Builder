@@ -145,18 +145,6 @@ jobs:
     - name: 安装 Feeds
       run: cd openwrt && ./scripts/feeds install -a
 
-    - name: 加载自定义配置 (Part 2)
-      run: |
-        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] && mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
-        [ -d $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files openwrt/files
-        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
-        cd openwrt
-        chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
-        $GITHUB_WORKSPACE/$DIY_P2_SH
-        make defconfig
-        echo "当前 diffconfig:"
-        ./scripts/diffconfig.sh
-
     - name: 提取插件列表
       id: extract-packages
       run: |
@@ -180,6 +168,18 @@ jobs:
         name: package-list-${{ matrix.device }}
         # 同样使用绝对路径，确保万无一失
         path: ${{ github.workspace }}/packages.txt
+
+    - name: 加载自定义配置 (Part 2)
+      run: |
+        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] && mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
+        [ -d $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files openwrt/files
+        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
+        cd openwrt
+        chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
+        make defconfig
+        echo "当前 diffconfig:"
+        ./scripts/diffconfig.sh
 
     - name: 缓存工具链
       uses: HiGarfield/cachewrtbuild@main
