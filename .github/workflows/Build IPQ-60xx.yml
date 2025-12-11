@@ -149,7 +149,9 @@ jobs:
       id: extract-packages
       run: |
         echo "正在从源配置文件 ${{ matrix.config_file }} 中提取插件列表..."
-        grep 'CONFIG_PACKAGE_luci-app-' ${{ matrix.config_file }} | \
+        grep 'luci-app-' ${{ matrix.config_file }} | \
+        grep -v '^#' | \
+        grep -v 'is not set' | \
         sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
         sort > packages.txt || true
         
