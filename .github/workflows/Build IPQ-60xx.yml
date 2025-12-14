@@ -21,7 +21,7 @@ on:
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
-  REPO_BRANCH: 24.10-6.12
+  REPO_BRANCH: k6.12-nss
   FEEDS_CONF: feeds.conf.default
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
@@ -112,7 +112,6 @@ jobs:
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
         echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
-        # 如果 inputs.tag 为空，则回退到 REPO_BRANCH 作为默认 TAG
         if [ -n "${{ github.event.inputs.tag }}" ]; then
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
         else
