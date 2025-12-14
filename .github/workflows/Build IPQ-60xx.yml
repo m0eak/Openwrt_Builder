@@ -168,7 +168,6 @@ jobs:
       uses: actions/upload-artifact@main
       with:
         name: package-list-${{ matrix.device }}
-        # 同样使用绝对路径，确保万无一失
         path: ${{ github.workspace }}/packages.txt
 
     - name: 加载自定义配置 (Part 2)

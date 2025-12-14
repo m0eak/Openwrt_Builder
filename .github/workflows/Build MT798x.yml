@@ -131,9 +131,12 @@ jobs:
       id: extract-packages
       run: |
         echo "正在从源配置文件 ${{ matrix.config_file }} 中提取插件列表..."
-        grep 'CONFIG_PACKAGE_luci-app-' ${{ matrix.config_file }} | \
+        grep 'luci-app-' ${{ matrix.config_file }} | \
+        grep -v '^#' | \
+        grep -v 'is not set' | \
         sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
         sort > packages.txt || true
+        
         echo "检查生成的文件内容："
         if [ -s packages.txt ]; then
           cat packages.txt
@@ -142,7 +145,7 @@ jobs:
           echo "警告：packages.txt 为空！可能是源配置文件中没有 luci-app 插件。"
           echo "无插件信息" > packages.txt
         fi
-
+        
     - name: 上传插件列表产物
       uses: actions/upload-artifact@main
       with:
@@ -247,14 +250,14 @@ jobs:
       id: release-meta
       run: |
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="MT798x-${REPO_BRANCH}-${DATE_SUFFIX}"
+        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag || '6.12.57' }}-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
-
+        
         echo "### 固件下载" > release-body.md
         echo "" >> release-body.md
         echo "本次发布包含以下设备的固件：" >> release-body.md
-        for dir in all-firmware/firmware-*; do
+        for dir in all-artifacts/firmware-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
           echo "- **$DEVICE_NAME**" >> release-body.md
         done
@@ -264,8 +267,15 @@ jobs:
         echo "" >> release-body.md
         echo "---" >> release-body.md
         
-        echo "### 插件列表" >> release-body.md
-        cat all-firmware/package-list-*/packages.txt | sort -u | sed 's/^/- /' >> release-body.md
+        echo "### 插件列表详情" >> release-body.md
+        # 遍历每个设备的插件列表目录
+        for dir in all-artifacts/package-list-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          
+          echo "" >> release-body.md
+          echo "#### 🔌 $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
+        done
 
     - name: 创建统一 Release
       uses: softprops/action-gh-release@v2
