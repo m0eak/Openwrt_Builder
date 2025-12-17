@@ -17,7 +17,7 @@ on:
       tag:
         description: '内核版本'
         required: false
-        default: '6.12.57'
+        default: '6.12.60'
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
@@ -260,7 +260,7 @@ jobs:
       id: release-meta
       run: |
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag || '6.12.57' }}-${DATE_SUFFIX}"
+        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag || '6.12.60' }}-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
         
