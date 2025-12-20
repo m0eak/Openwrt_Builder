@@ -257,7 +257,7 @@ jobs:
         echo "### 固件下载" > release-body.md
         echo "" >> release-body.md
         echo "本次发布包含以下设备的固件：" >> release-body.md
-        for dir in all-artifacts/firmware-*; do
+        for dir in all-firmware/firmware-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
           echo "- **$DEVICE_NAME**" >> release-body.md
         done
@@ -269,7 +269,7 @@ jobs:
         
         echo "### 插件列表详情" >> release-body.md
         # 遍历每个设备的插件列表目录
-        for dir in all-artifacts/package-list-*; do
+        for dir in all-firmware/package-list-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
           
           echo "" >> release-body.md
