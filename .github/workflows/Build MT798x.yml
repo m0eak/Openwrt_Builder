@@ -250,7 +250,7 @@ jobs:
       id: release-meta
       run: |
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="MT798X-${DATE_SUFFIX}"
+        RELEASE_TAG="MT798x-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
         
