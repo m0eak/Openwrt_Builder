@@ -123,7 +123,9 @@ elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 TR-3000 的特定修改"
     sed -i 's/192.168.6.1/192.168.100.209/g' package/base-files/files/bin/config_generate
     echo "TR-3000 IP 修改为 192.168.100.209"
-
+    # 修改tailscale
+    ls ./feeds/packages/net/tailscale/
+    sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' ./feeds/packages/net/tailscale/Makefile && echo "tailscale修改完成"
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
