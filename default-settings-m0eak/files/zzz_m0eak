@@ -17,7 +17,6 @@ chmod +x /usr/share/extpart.sh
 ln -s /usr/share/extpart.sh /bin/extpart
 if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^mosdns")" -ne '0' ];then
   uci set mosdns.config.enabled='1'
-  uci set mosdns.config.redirect='0'
   uci set mosdns.config.custom_local_dns='1'
   uci set mosdns.config.dns_leak='1'
   uci add_list mosdns.config.local_dns='https://doh.pub/dns-query'
