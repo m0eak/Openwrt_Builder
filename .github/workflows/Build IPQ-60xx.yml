@@ -260,7 +260,7 @@ jobs:
       id: release-meta
       run: |
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="IPQ60xx-${{ github.event.inputs.tag || '6.12.62' }}-${DATE_SUFFIX}"
+        RELEASE_TAG="IPQ60xx-25.12-Snapshot-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
         echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
         
