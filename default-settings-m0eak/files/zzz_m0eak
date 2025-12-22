@@ -40,7 +40,7 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^aria2")" -ne '0' ];then
   /etc/init.d/aria2 restart
 fi
 
-uci set luci.main.mediaurlbase='/luci-static/bootstrap'
+uci set luci.main.mediaurlbase='/luci-static/aurora'
 uci commit luci
 
 sed -i "s/option rollback '60'/option rollback '30'/" /etc/config/luci
