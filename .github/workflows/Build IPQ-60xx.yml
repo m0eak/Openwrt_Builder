@@ -21,7 +21,7 @@ on:
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
-  REPO_BRANCH: k6.12-nss
+  REPO_BRANCH: 25.12-nss
   FEEDS_CONF: feeds.conf.default
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
