@@ -13,6 +13,7 @@
 # 定义目标目录
 [ -e feeds/packages/lang/rust/Makefile ] && sed -i 's/--set=llvm\.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' feeds/packages/lang/rust/Makefile
 TARGET_DIR="$PWD/package/custom"
+rm -rf $TARGET_DIR
 
 # 定义要克隆的仓库和分支
 declare -A REPOS=(
