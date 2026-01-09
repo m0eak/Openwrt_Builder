@@ -42,6 +42,7 @@ declare -A REPOS=(
     ["https://github.com/EasyTier/luci-app-easytier"]=""
     #["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
     #["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
+    ["https://github.com/immortalwrt/homeproxy"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
