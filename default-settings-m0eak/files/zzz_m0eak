@@ -55,8 +55,6 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "^luci-app-fancontrol")" -ne '0' 
   uci set fancontrol.settings.start_temp='70'
   uci commit fancontrol
   /etc/init.d/fancontrol restart
-  echo "0 20 * * * uci set fancontrol.settings.start_temp='75' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
-  echo "30 9 * * * uci set fancontrol.settings.start_temp='65' && uci commit fancontrol && /etc/init.d/fancontrol restart" >> /etc/crontabs/root
 fi
 
 uci commit
@@ -80,11 +78,11 @@ if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(gre
   echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
 fi
 
-if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo "0" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
+if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
   echo "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 
-if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo "1" > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
+if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
   echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
 fi
 
