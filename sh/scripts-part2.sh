@@ -35,13 +35,13 @@ declare -A REPOS=(
     ["https://github.com/eamonxg/luci-app-aurora-config"]=""
     ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
     ["https://github.com/sirpdboy/luci-app-netspeedtest.git"]="js"
-    ["https://github.com/asvow/luci-app-tailscale.git"]=""
+    ["https://github.com/Tokisaki-Galaxy/luci-app-tailscale-community.git"]=""
     ["https://github.com/lwb1978/openwrt-gecoosac.git"]=""
     ["https://github.com/miaoermua/luci-app-leigod-acc.git"]=""
     ["https://github.com/nikkinikki-org/OpenWrt-momo"]=""
     ["https://github.com/EasyTier/luci-app-easytier"]=""
-    #["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
-    #["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
+    ["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
+    ["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
     ["https://github.com/immortalwrt/homeproxy"]=""
 )
 
