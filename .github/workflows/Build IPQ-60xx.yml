@@ -17,11 +17,11 @@ on:
       tag:
         description: '内核版本'
         required: false
-        default: '25.12.0-rc2'
+        default: '25.12.0-rc3'
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
-  REPO_BRANCH: 25.12.0-rc2
+  REPO_BRANCH: 25.12.0-rc3
   FEEDS_CONF: feeds.conf.default
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
