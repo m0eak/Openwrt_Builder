@@ -110,10 +110,6 @@ jobs:
         git clone -b $REPO_BRANCH $REPO_URL_IMM --single-branch --depth 1 openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        PROJECT_MIRRORS_FILE="./scripts/projectsmirrors.json"
-        if [ -f "$PROJECT_MIRRORS_FILE" ]; then
-          sed -i '/.cn\//d; /tencent/d; /aliyun/d' "$PROJECT_MIRRORS_FILE"
-        fi
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 加载 Feeds 和自定义脚本 (Part 1)
