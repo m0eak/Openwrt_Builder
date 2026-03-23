@@ -1,8 +1,8 @@
 name: Build MT3600BE
 
 on:
-  schedule:
-    - cron: '0 2 */5 * *'
+  # schedule:
+  #   - cron: '0 2 */5 * *'
   workflow_dispatch:
 
 env:
