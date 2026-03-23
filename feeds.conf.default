@@ -1,8 +1,0 @@
-src-git packages https://github.com/immortalwrt/packages.git^ea73679057e461df745322499ed6a410ab1f6076
-src-git luci https://github.com/immortalwrt/luci.git^797bf787bc9be8cfc1259e5e6eb65b534e0b17e0
-src-git routing https://git.openwrt.org/feed/routing.git
-src-git telephony https://git.openwrt.org/feed/telephony.git
-src-git video https://github.com/openwrt/video.git
-#src-git targets https://github.com/openwrt/targets.git
-#src-git oldpackages http://git.openwrt.org/packages.git
-#src-link custom /usr/src/openwrt/custom-feed
