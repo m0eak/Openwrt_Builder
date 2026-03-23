@@ -53,9 +53,9 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
         echo "JDC-AX6600 IP 修改为 192.168.100.1"
     fi
 
-    # 更新Golang版本
-    rm -rf feeds/packages/lang/golang && echo "删除golang"
-    git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+    # 更新Golang版本（当前已停用，保留注释便于回滚）
+    # rm -rf feeds/packages/lang/golang && echo "删除golang"
+    # git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
     # 下载对应内核版本的vermagic
     wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL_VERSION-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
@@ -83,10 +83,10 @@ elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
     VERSION2=${TAG2#v}
     echo "immortalwrt 当前版本 (VERSION2): $VERSION2"
 
-    # 更新Golang版本
-    rm -rf feeds/packages/lang/golang && echo "删除golang"
-    git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
-    cat feeds/packages/lang/golang/golang/Makefile
+    # 更新Golang版本（当前已停用，保留注释便于回滚）
+    # rm -rf feeds/packages/lang/golang && echo "删除golang"
+    # git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+    # cat feeds/packages/lang/golang/golang/Makefile
 
     # 修改默认IP
     sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
@@ -119,6 +119,12 @@ elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 TR-3000 的特定修改"
     #sed -i 's/192.168.6.1/192.168.100.209/g' package/base-files/files/bin/config_generate
     #echo "TR-3000 IP 修改为 192.168.100.209"
+
+# --- 逻辑块 4: 处理 GL-MT3600BE ---
+elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
+    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT3600BE 的特定修改"
+    sed -i 's/192.168.1.1/192.168.9.1/g' package/base-files/files/bin/config_generate
+    echo "mt3600be IP 修改为 192.168.9.1"
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
