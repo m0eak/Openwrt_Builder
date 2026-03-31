@@ -39,6 +39,7 @@ declare -A REPOS=(
     ["https://github.com/nikkinikki-org/OpenWrt-momo"]=""
     ["https://github.com/EasyTier/luci-app-easytier"]=""
     ["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
+    ["https://github.com/Openwrt-Passwall/openwrt-passwall"]=""
     ["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
     #["https://github.com/immortalwrt/homeproxy"]=""
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
