@@ -43,6 +43,7 @@ declare -A REPOS=(
     ["https://github.com/Openwrt-Passwall/openwrt-passwall-packages"]=""
     #["https://github.com/immortalwrt/homeproxy"]=""
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
+    ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
 )
 
 # 删除 mosdns 相关的 Makefile
