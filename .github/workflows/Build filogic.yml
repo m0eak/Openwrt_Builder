@@ -31,7 +31,7 @@ jobs:
             repo_branch: 'mt5000'
             config_file: './config/mt5000.config'
             workflow_name: 'GL-MT5000'
-    
+
     steps:
     - name: 检出仓库代码
       uses: actions/checkout@main
@@ -103,70 +103,160 @@ jobs:
       working-directory: /workdir
       run: |
         git clone -b ${{ matrix.repo_branch }} ${{ matrix.repo_url }} --single-branch --depth 1 openwrt
+        ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
+        cd openwrt
+        echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
-    - name: 加载自定义配置
+    - name: 加载 Feeds 和自定义脚本 (Part 1)
       run: |
-        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} /workdir/openwrt/.config
-        chmod +x $DIY_P1_SH
-        cd /workdir/openwrt
-        $GITHUB_WORKSPACE/$DIY_P1_SH ${{ matrix.device }}
-
-    - name: 更新 feeds
-      run: |
-        cd /workdir/openwrt
+        cd openwrt
+        [ -e $GITHUB_WORKSPACE/$FEEDS_CONF ] && cp $GITHUB_WORKSPACE/$FEEDS_CONF ./feeds.conf.default
         ./scripts/feeds update -a
-        ./scripts/feeds install -a
+        chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH
+        $GITHUB_WORKSPACE/$DIY_P1_SH
 
-    - name: 运行 DIY 脚本 2
+    - name: 安装 Feeds
+      run: cd openwrt && ./scripts/feeds install -a
+
+    - name: 提取插件列表
+      id: extract-packages
       run: |
-        chmod +x $DIY_P2_SH
-        cd /workdir/openwrt
-        $GITHUB_WORKSPACE/$DIY_P2_SH ${{ matrix.device }}
+        echo "正在从源配置文件 ${{ matrix.config_file }} 中提取插件列表..."
+        grep 'luci-app-' ${{ matrix.config_file }} | \
+        grep -v '^#' | \
+        grep -v 'is not set' | \
+        sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
+        sort > packages.txt || true
+
+        echo "检查生成的文件内容："
+        if [ -s packages.txt ]; then
+          cat packages.txt
+          echo "文件生成成功！"
+        else
+          echo "警告：packages.txt 为空！可能是源配置文件中没有 luci-app 插件。"
+          echo "无插件信息" > packages.txt
+        fi
+
+    - name: 上传插件列表产物
+      uses: actions/upload-artifact@main
+      with:
+        name: package-list-${{ matrix.device }}
+        path: ${{ github.workspace }}/packages.txt
+
+    - name: 加载自定义配置 (Part 2)
+      run: |
+        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] && mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
+        [ -d $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files openwrt/files
+        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
+        cd openwrt
+        chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
+        $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
+        echo "当前 diffconfig:"
         ./scripts/diffconfig.sh
+
+    - name: 缓存工具链
+      uses: HiGarfield/cachewrtbuild@main
+      if: env.CACHE_TOOLCHAIN != 'false'
+      with:
+        ccache: true
+        mixkey: ${{ github.workflow }}-${{ matrix.workflow_name }}-${{ hashFiles(matrix.config_file, '**/scripts-part*.sh') }}
+        prefix: ${{ env.OPENWRT_PATH }}
 
     - name: 下载软件包
       run: |
-        cd /workdir/openwrt
-        make download -j$(nproc)
-        find dl -size -1024c -exec ls -l {} \;
+        cd openwrt
+        make download -j$(nproc) || make download -j1 V=s
         find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
       run: |
-        cd /workdir/openwrt
-        echo -e "开始编译... 任务线程数：$(nproc)"
-        make -j$(nproc) || make -j1 || make -j1 V=s
-        echo "编译完成！"
+        cd openwrt
+        echo "使用 $(nproc) 线程进行编译..."
+        make -j$(expr $(nproc) + 1) || make -j1 V=s
+
+    - name: 编译后清理临时文件
+      if: success()
+      run: |
+        echo "编译完成，开始清理临时编译目录..."
+        cd openwrt
+        rm -rf build_dir tmp
+        echo "临时文件清理完毕！"
 
     - name: 整理固件文件
       id: organize
       run: |
-        cd /workdir/openwrt
-        rm -rf firmware tmp && mkdir firmware && cp bin/targets/*/*/*sysupgrade.bin firmware/ || true
-        cp .config firmware/config.txt
-        echo "FIRMWARE=$PWD/firmware" >> $GITHUB_OUTPUT
-        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        echo "RELEASE_TAG=${{ matrix.device }}-${DATE_SUFFIX}" >> $GITHUB_ENV
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 上传固件产物
       uses: actions/upload-artifact@main
       with:
-        name: ${{ matrix.device }}-firmware
-        path: ${{ steps.organize.outputs.FIRMWARE }}
+        name: firmware-${{ matrix.device }}
+        path: ${{ env.FIRMWARE_PATH }}
 
-    - name: 发布 Release
-      uses: ncipollo/release-action@v1
+  publish_release:
+    name: 合并并发布固件
+    needs: build
+    runs-on: ubuntu-22.04
+    if: success()
+
+    steps:
+    - name: 下载所有固件产物
+      uses: actions/download-artifact@v4
       with:
-        tag: ${{ env.RELEASE_TAG }}
-        artifacts: ${{ steps.organize.outputs.FIRMWARE }}/*
-        allowUpdates: true
-        removeArtifacts: true
-        token: ${{ secrets.GITHUB_TOKEN }}
-        body: |
-          **固件信息**
-          - 机型: ${{ matrix.device }}
-          - 源码仓库: ${{ matrix.repo_url }}
-          - 分支: ${{ matrix.repo_branch }}
-          - 配置文件: ${{ matrix.config_file }}
-          - 编译时间: $(date +"%Y-%m-%d %H:%M:%S")
+        path: all-artifacts
+
+    - name: 重命名固件文件以避免冲突
+      run: |
+        echo "开始重命名通用文件以防止上传冲突..."
+        for dir in all-artifacts/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "正在处理设备: $DEVICE_NAME"
+          cd "$dir"
+          for file in version.buildinfo sha256sums profiles.json config.buildinfo feeds.buildinfo; do
+            if [ -f "$file" ]; then
+              mv "$file" "${DEVICE_NAME}-${file}"
+              echo "  重命名: $file -> ${DEVICE_NAME}-${file}"
+            fi
+          done
+          if [ -f "${DEVICE_NAME}-sha256sums" ]; then
+            sed -i "s/ \*/ ${DEVICE_NAME}-/" "${DEVICE_NAME}-sha256sums"
+          fi
+          cd ../..
+        done
+        echo "所有文件重命名完毕！"
+
+    - name: 生成统一发布标签和内容
+      id: release-meta
+      run: |
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="filogic-${DATE_SUFFIX}"
+        echo "生成的统一发布标签: $RELEASE_TAG"
+        echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
+
+        echo "### 固件下载" > release-body.md
+        echo "" >> release-body.md
+        echo "本次发布包含以下设备的固件：" >> release-body.md
+        for dir in all-artifacts/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "- **$DEVICE_NAME**" >> release-body.md
+        done
+        echo "" >> release-body.md
+        echo "---" >> release-body.md
+
+        echo "### 插件列表详情" >> release-body.md
+        for dir in all-artifacts/package-list-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          echo "" >> release-body.md
+          echo "#### 🔌 $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
+        done
+
+    - name: 创建统一 Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.release_tag }}
+        body_path: release-body.md
+        files: all-artifacts/firmware-*/*
