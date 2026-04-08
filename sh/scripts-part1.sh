@@ -125,6 +125,12 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT3600BE 的特定修改"
     sed -i 's/192.168.1.1/192.168.9.1/g' package/base-files/files/bin/config_generate
     echo "mt3600be IP 修改为 192.168.9.1"
+
+# --- 逻辑块 5: 处理 GL-MT5000 ---
+elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
+    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
+    sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
+    echo "mt5000 IP 修改为 192.168.100.1"
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
