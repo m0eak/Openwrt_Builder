@@ -259,4 +259,13 @@ jobs:
       with:
         tag_name: ${{ env.release_tag }}
         body_path: release-body.md
-        files: all-artifacts/firmware-*/*
+        files: |
+          all-artifacts/firmware-*/*.manifest
+          all-artifacts/firmware-*/*sysupgrade.bin
+          all-artifacts/firmware-*/*factory.bin
+          all-artifacts/firmware-*/*initramfs-kernel.bin
+          all-artifacts/firmware-*/*-version.buildinfo
+          all-artifacts/firmware-*/*-sha256sums
+          all-artifacts/firmware-*/*-profiles.json
+          all-artifacts/firmware-*/*-config.buildinfo
+          all-artifacts/firmware-*/*-feeds.buildinfo
