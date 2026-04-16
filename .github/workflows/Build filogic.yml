@@ -98,6 +98,25 @@ jobs:
         sudo chown $USER:$GROUPS /workdir
         echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
 
+    - name: 安装本地 Automake 1.17
+      run: |
+        set -e
+        PREFIX=/workdir/automake-1.17
+        BUILD_DIR=/workdir/automake-1.17-build
+        mkdir -p "$BUILD_DIR"
+        cd "$BUILD_DIR"
+        curl -fL https://ftp.gnu.org/gnu/automake/automake-1.17.tar.xz -o automake-1.17.tar.xz
+        rm -rf automake-1.17-src
+        mkdir -p automake-1.17-src
+        tar -xf automake-1.17.tar.xz -C automake-1.17-src --strip-components=1
+        cd automake-1.17-src
+        ./configure --prefix="$PREFIX"
+        make -j$(nproc)
+        make install
+        echo "$PREFIX/bin" >> $GITHUB_PATH
+        "$PREFIX/bin/automake-1.17" --version | sed -n '1p'
+        "$PREFIX/bin/aclocal-1.17" --version | sed -n '1p'
+
     - name: 克隆固件源代码
       working-directory: /workdir
       run: |
@@ -116,6 +135,12 @@ jobs:
 
     - name: 安装 Feeds
       run: cd openwrt && ./scripts/feeds install -a
+
+    - name: 应用 Sonic Fullcone 补丁
+      if: matrix.workflow_name == 'GL-MT5000'
+      run: |
+        cd openwrt
+        curl -sSL https://raw.githubusercontent.com/mufeng05/openwrt-sonic-fullcone/master/add_sonic_fullcone.sh | bash
 
     - name: 提取插件列表
       id: extract-packages
