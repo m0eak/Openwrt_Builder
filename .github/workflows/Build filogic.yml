@@ -22,8 +22,8 @@ jobs:
       matrix:
         include:
           - device: GL-MT3600BE
-            repo_url: 'https://github.com/m0eak/openwrt.git'
-            repo_branch: 'mt3600be'
+            repo_url: 'https://github.com/immortalwrt/immortalwrt.git'
+            repo_branch: 'master'
             config_file: './config/mt3600be.config'
             workflow_name: 'GL-MT3600BE'
           - device: GL-MT5000
