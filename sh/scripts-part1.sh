@@ -123,6 +123,28 @@ elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
 # --- 逻辑块 4: 处理 GL-MT3600BE ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT3600BE 的特定修改"
+
+    CUSTOM_DTS_URL="https://raw.githubusercontent.com/openwrt/openwrt/cced8d95f3caa9f48eaeb4ef2d15426d20afaf16/target/linux/mediatek/dts/mt7987a-glinet-gl-mt3600be.dts"
+    CUSTOM_DTS_TARGET="target/linux/mediatek/dts/mt7987a-glinet-gl-mt3600be.dts"
+    CUSTOM_DTS_TMP="/tmp/mt7987a-glinet-gl-mt3600be.dts"
+
+    if [[ -f "$CUSTOM_DTS_TARGET" ]]; then
+        echo "开始下载自定义 MT3600BE DTS..."
+        curl -fL "$CUSTOM_DTS_URL" -o "$CUSTOM_DTS_TMP"
+
+        echo "校验下载到的 DTS..."
+        grep -q 'GL-MT3600BE' "$CUSTOM_DTS_TMP"
+        grep -q 'cooling-levels' "$CUSTOM_DTS_TMP"
+
+        cp "$CUSTOM_DTS_TMP" "$CUSTOM_DTS_TARGET"
+        echo "已替换 $CUSTOM_DTS_TARGET"
+        echo "cooling-levels 片段:"
+        grep -n 'cooling-levels' "$CUSTOM_DTS_TARGET"
+    else
+        echo "错误: 未找到目标 DTS 文件 $CUSTOM_DTS_TARGET"
+        exit 1
+    fi
+
     sed -i 's/192.168.1.1/192.168.9.1/g' package/base-files/files/bin/config_generate
     echo "mt3600be IP 修改为 192.168.9.1"
 
