@@ -1,8 +1,8 @@
 name: Build filogic
 
 on:
-  # schedule:
-  #   - cron: '0 2 */5 * *'
+  schedule:
+    - cron: '0 2 */4 * *'
   workflow_dispatch:
 
 env:
