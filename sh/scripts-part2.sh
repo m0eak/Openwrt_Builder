@@ -133,24 +133,6 @@ done
 
 echo "所有仓库克隆完成"
 
-# === EasyTier: LuCI 用最新，后端 easytier 锁到 v2.5.0 ===
-EASYTIER_DIR="$TARGET_DIR/luci-app-easytier"
-
-if [ -d "$EASYTIER_DIR" ]; then
-    echo "开始处理 EasyTier 版本锁定..."
-
-    cat > "$EASYTIER_DIR/version.mk" <<'EOF'
-EASYTIER_VERSION:=2.5.0
-EOF
-    echo "已写入 $EASYTIER_DIR/version.mk"
-
-    if [ -f "$EASYTIER_DIR/easytier/Makefile" ] && ! grep -q 'EASYTIER_VERSION' "$EASYTIER_DIR/easytier/Makefile"; then
-        sed -i '1a -include $(dir $(lastword $(MAKEFILE_LIST)))../version.mk' "$EASYTIER_DIR/easytier/Makefile"
-        sed -i 's/^PKG_VERSION:=.*/PKG_VERSION:=$(or $(EASYTIER_VERSION),2.5.0)/' "$EASYTIER_DIR/easytier/Makefile"
-        echo "已为 easytier/Makefile 补充 version.mk 支持"
-    fi
-fi
-
 cd $TARGET_DIR/turboacc/luci-app*
 if [ "$(ls -la | grep -c "Makefile")" -eq '0' ]; then
     echo "未找到 Makefile，终止 GitHub Action"
