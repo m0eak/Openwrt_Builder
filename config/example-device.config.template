@@ -1,0 +1,88 @@
+
+# 示例设备配置文件模板
+# 请根据你的设备实际情况修改
+
+# ===== 目标系统配置 =====
+# 请替换为你的设备对应的目标
+# 常见 target: mediatek, qualcommax, x86, ramips, ath79 等
+CONFIG_TARGET_mediatek=y
+CONFIG_TARGET_mediatek_filogic=y
+CONFIG_TARGET_mediatek_filogic_DEVICE_glinet_gl-mt3000=y
+
+# ===== 核心配置 =====
+CONFIG_COREMARK_NUMBER_OF_THREADS=4
+
+# ===== 基础软件包 =====
+CONFIG_PACKAGE_luci=y
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
+
+# ===== 常用插件配置示例 =====
+
+# 网络相关
+CONFIG_PACKAGE_luci-app-wolplus=y
+CONFIG_PACKAGE_luci-i18n-wolplus-zh-cn=y
+
+# 代理相关（可选）
+CONFIG_PACKAGE_luci-app-passwall=y
+CONFIG_PACKAGE_luci-i18n-passwall-zh-cn=y
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_Haproxy=y
+CONFIG_PACKAGE_luci-app-passwall_INCLUDE_SingBox=y
+
+# DNS 相关
+CONFIG_PACKAGE_luci-app-mosdns=y
+CONFIG_PACKAGE_luci-i18n-mosdns-zh-cn=y
+CONFIG_PACKAGE_mosdns=y
+
+# 智能 DNS
+CONFIG_PACKAGE_luci-app-smartdns=y
+CONFIG_PACKAGE_luci-i18n-smartdns-zh-cn=y
+CONFIG_PACKAGE_smartdns=y
+
+# 主题
+CONFIG_PACKAGE_luci-theme-design=y
+CONFIG_PACKAGE_luci-app-design-config=y
+
+# 系统工具
+CONFIG_PACKAGE_luci-app-ttyd=y
+CONFIG_PACKAGE_luci-i18n-ttyd-zh-cn=y
+CONFIG_PACKAGE_ttyd=y
+
+CONFIG_PACKAGE_htop=y
+CONFIG_PACKAGE_curl=y
+CONFIG_PACKAGE_wget=y
+
+# 存储相关
+CONFIG_PACKAGE_luci-app-diskman=y
+CONFIG_PACKAGE_luci-i18n-diskman-zh-cn=y
+CONFIG_PACKAGE_luci-app-diskman_INCLUDE_lsblk=y
+CONFIG_PACKAGE_kmod-fs-exfat=y
+CONFIG_PACKAGE_kmod-fs-ntfs3=y
+
+# 网络加速
+CONFIG_PACKAGE_luci-app-turboacc=y
+
+# VPN
+CONFIG_PACKAGE_luci-proto-wireguard=y
+CONFIG_PACKAGE_wireguard-tools=y
+CONFIG_PACKAGE_luci-app-tailscale-community=y
+CONFIG_PACKAGE_luci-i18n-tailscale-community-zh-cn=y
+CONFIG_PACKAGE_tailscale=y
+
+# DDNS
+CONFIG_PACKAGE_luci-app-ddns-go=y
+CONFIG_PACKAGE_luci-i18n-ddns-go-zh-cn=y
+CONFIG_PACKAGE_ddns-go=y
+
+# 系统监控
+CONFIG_PACKAGE_luci-app-statistics=y
+CONFIG_PACKAGE_luci-i18n-statistics-zh-cn=y
+CONFIG_PACKAGE_collectd=y
+CONFIG_PACKAGE_collectd-mod-cpu=y
+CONFIG_PACKAGE_collectd-mod-interface=y
+CONFIG_PACKAGE_collectd-mod-memory=y
+
+# ===== 其他有用的包 =====
+CONFIG_PACKAGE_openssh-sftp-server=y
+CONFIG_PACKAGE_tcping=y
+CONFIG_PACKAGE_jq=y
+
