@@ -153,6 +153,13 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
     sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
     echo "mt5000 IP 修改为 192.168.100.1"
+
+# --- 逻辑块 6: 处理 jdcloud_re-ss-01 ---
+elif [[ "$WORKFLOW_NAME" == "jdcloud_re-ss-01" ]]; then
+    echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 jdcloud_re-ss-01 的特定修改"
+    sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
+    echo "jdcloud_re-ss-01 IP 修改为 192.168.100.1"
+    echo "jdcloud_re-ss-01 使用 ImmortalWrt 官方代码库，无需额外的补丁"
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
