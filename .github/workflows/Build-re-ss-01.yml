@@ -1,10 +1,9 @@
-
-name: Build Example Device
+name: Build re-ss-01 Device
 
 on:
   schedule:
-    - cron: '0 2 */4 * *'  # 每4天执行一次
-  workflow_dispatch:  # 允许手动触发
+    - cron: '0 2 */4 * *'
+  workflow_dispatch:
 
 env:
   FEEDS_CONF: feeds.conf.default
@@ -22,13 +21,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # ========== 在这里添加你的设备 ==========
           - device: re-ss-01
             repo_url: 'https://github.com/fanchmwrt/fanchmwrt.git'
             repo_branch: 'main'
             config_file: './config/re-ss-01.config'
             workflow_name: 're-ss-01'
-          # =======================================
 
     steps:
     - name: 检出仓库代码
@@ -84,13 +81,13 @@ jobs:
         sudo rm -rf /etc/apt/sources.list.d/*
         sudo -E apt-get -yqq update
         sudo -E apt-get -yqq purge azure-cli* ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
-        sudo bash -c 'bash &lt;(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
+        sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
         sudo -E apt-get -yqq autoremove --purge
         sudo -E apt-get -yqq clean
         sudo timedatectl set-timezone "$TZ"
         sudo mkdir -p /workdir
         sudo chown $USER:$GROUPS /workdir
-        echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" &gt;&gt; $GITHUB_ENV
+        echo "WORKFLOW_NAME=${{ matrix.workflow_name }}" >> $GITHUB_ENV
 
     - name: 安装本地 Automake 1.17
       run: |
@@ -107,7 +104,7 @@ jobs:
         ./configure --prefix="$PREFIX"
         make -j$(nproc)
         make install
-        echo "$PREFIX/bin" &gt;&gt; $GITHUB_PATH
+        echo "$PREFIX/bin" >> $GITHUB_PATH
         "$PREFIX/bin/automake-1.17" --version | sed -n '1p'
         "$PREFIX/bin/aclocal-1.17" --version | sed -n '1p'
 
@@ -117,18 +114,18 @@ jobs:
         git clone -b ${{ matrix.repo_branch }} ${{ matrix.repo_url }} --single-branch --depth 1 openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
         cd openwrt
-        echo "OPENWRT_PATH=$PWD" &gt;&gt; $GITHUB_ENV
+        echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 加载 Feeds 和自定义脚本 (Part 1)
       run: |
         cd openwrt
-        [ -e $GITHUB_WORKSPACE/$FEEDS_CONF ] &amp;&amp; cp $GITHUB_WORKSPACE/$FEEDS_CONF ./feeds.conf.default
+        [ -e $GITHUB_WORKSPACE/$FEEDS_CONF ] && cp $GITHUB_WORKSPACE/$FEEDS_CONF ./feeds.conf.default
         ./scripts/feeds update -a
         chmod +x $GITHUB_WORKSPACE/$DIY_P1_SH
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
     - name: 安装 Feeds
-      run: cd openwrt &amp;&amp; ./scripts/feeds install -a
+      run: cd openwrt && ./scripts/feeds install -a
 
     - name: 提取插件列表
       id: extract-packages
@@ -138,7 +135,7 @@ jobs:
         grep -v '^#' | \
         grep -v 'is not set' | \
         sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
-        sort &gt; packages.txt || true
+        sort > packages.txt || true
 
         echo "检查生成的文件内容："
         if [ -s packages.txt ]; then
@@ -146,7 +143,7 @@ jobs:
           echo "文件生成成功！"
         else
           echo "警告：packages.txt 为空！可能是源配置文件中没有 luci-app 插件。"
-          echo "无插件信息" &gt; packages.txt
+          echo "无插件信息" > packages.txt
         fi
 
     - name: 上传插件列表产物
@@ -157,9 +154,9 @@ jobs:
 
     - name: 加载自定义配置 (Part 2)
       run: |
-        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] &amp;&amp; mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
-        [ -d $GITHUB_WORKSPACE/files ] &amp;&amp; mv $GITHUB_WORKSPACE/files openwrt/files
-        [ -e "${{ matrix.config_file }}" ] &amp;&amp; mv ${{ matrix.config_file }} openwrt/.config
+        [ -e $GITHUB_WORKSPACE/$DEFAULT_SETTING ] && mv $GITHUB_WORKSPACE/$DEFAULT_SETTING openwrt/package/default-settings-m0eak
+        [ -d $GITHUB_WORKSPACE/files ] && mv $GITHUB_WORKSPACE/files openwrt/files
+        [ -e "${{ matrix.config_file }}" ] && mv ${{ matrix.config_file }} openwrt/.config
         cd openwrt
         chmod +x $GITHUB_WORKSPACE/$DIY_P2_SH
         $GITHUB_WORKSPACE/$DIY_P2_SH
@@ -200,7 +197,7 @@ jobs:
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
-        echo "FIRMWARE_PATH=$PWD" &gt;&gt; $GITHUB_ENV
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
 
     - name: 上传固件产物
       uses: actions/upload-artifact@main
@@ -230,7 +227,7 @@ jobs:
           for file in version.buildinfo sha256sums profiles.json config.buildinfo feeds.buildinfo; do
             if [ -f "$file" ]; then
               mv "$file" "${DEVICE_NAME}-${file}"
-              echo "  重命名: $file -&gt; ${DEVICE_NAME}-${file}"
+              echo "  重命名: $file -> ${DEVICE_NAME}-${file}"
             fi
           done
           if [ -f "${DEVICE_NAME}-sha256sums" ]; then
@@ -244,26 +241,26 @@ jobs:
       id: release-meta
       run: |
         DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
-        RELEASE_TAG="example-${DATE_SUFFIX}"
+        RELEASE_TAG="re-ss-01-${DATE_SUFFIX}"
         echo "生成的统一发布标签: $RELEASE_TAG"
-        echo "release_tag=$RELEASE_TAG" &gt;&gt; $GITHUB_ENV
+        echo "release_tag=$RELEASE_TAG" >> $GITHUB_ENV
 
-        echo "### 固件下载" &gt; release-body.md
-        echo "" &gt;&gt; release-body.md
-        echo "本次发布包含以下设备的固件：" &gt;&gt; release-body.md
+        echo "### 固件下载" > release-body.md
+        echo "" >> release-body.md
+        echo "本次发布包含以下设备的固件：" >> release-body.md
         for dir in all-artifacts/firmware-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
-          echo "- **$DEVICE_NAME**" &gt;&gt; release-body.md
+          echo "- **$DEVICE_NAME**" >> release-body.md
         done
-        echo "" &gt;&gt; release-body.md
-        echo "---" &gt;&gt; release-body.md
+        echo "" >> release-body.md
+        echo "---" >> release-body.md
 
-        echo "### 插件列表详情" &gt;&gt; release-body.md
+        echo "### 插件列表详情" >> release-body.md
         for dir in all-artifacts/package-list-*; do
           DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
-          echo "" &gt;&gt; release-body.md
-          echo "#### 🔌 $DEVICE_NAME" &gt;&gt; release-body.md
-          sed 's/^/- /' "$dir/packages.txt" &gt;&gt; release-body.md
+          echo "" >> release-body.md
+          echo "#### 🔌 $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
         done
 
     - name: 创建统一 Release
@@ -281,4 +278,3 @@ jobs:
           all-artifacts/firmware-*/*-profiles.json
           all-artifacts/firmware-*/*-config.buildinfo
           all-artifacts/firmware-*/*-feeds.buildinfo
-
