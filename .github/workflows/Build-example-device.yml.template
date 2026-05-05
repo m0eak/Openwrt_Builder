@@ -24,7 +24,7 @@ jobs:
           # ========== 在这里添加你的设备 ==========
           - device: jdcloud_re-ss-01
             repo_url: 'https://github.com/fanchmwrt/fanchmwrt.git'
-            repo_branch: 'main'
+            repo_branch: 'fanchmwrt-25.12.2'
             config_file: './config/jdcloud_re-ss-01.config'
             workflow_name: 'jdcloud_re-ss-01'
           # =======================================
