@@ -5,6 +5,9 @@ on:
     - cron: '0 2 */4 * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   FEEDS_CONF: feeds.conf.default
   DIY_P1_SH: ./sh/scripts-part1.sh
