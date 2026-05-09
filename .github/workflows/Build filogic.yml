@@ -26,6 +26,11 @@ jobs:
             repo_branch: 'mt5000'
             config_file: './config/mt5000.config'
             workflow_name: 'GL-MT5000'
+          - device: GL-MT3600BE
+            repo_url: 'https://github.com/VIKINGYFY/immortalwrt.git'
+            repo_branch: 'owrt'
+            config_file: './config/mt3600be.config'
+            workflow_name: 'GL-MT3600BE'
     steps:
     - name: 检出仓库代码
       uses: actions/checkout@main
