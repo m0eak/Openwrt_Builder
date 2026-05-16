@@ -86,8 +86,9 @@ jobs:
         sudo -E apt-get -yqq update
         sudo -E apt-get -yqq purge azure-cli* ghc* zulu* llvm* firefox google* dotnet* powershell openjdk* mongodb* moby* || true
         sudo bash -c 'bash <(curl -s https://build-scripts.immortalwrt.org/init_build_environment.sh)'
-        sudo -E apt-get install -y clang llvm npm dwarves
-        sudo -E npm install -g pnpm
+        curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+        sudo -E apt-get install -y clang llvm nodejs dwarves
+        sudo npm install -g pnpm
         sudo -E apt-get -yqq autoremove --purge
         sudo -E apt-get -yqq clean
         sudo timedatectl set-timezone "$TZ"
