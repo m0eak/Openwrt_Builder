@@ -44,6 +44,7 @@ declare -A REPOS=(
     #["https://github.com/immortalwrt/homeproxy"]=""
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
+    ["https://github.com/QiuSimons/luci-app-daed"]="kix"
 )
 
 # 删除 mosdns 相关的 Makefile
@@ -96,6 +97,16 @@ while IFS= read -r -d $'\0' file; do
     fi
 done
 echo "v2ray-geodata 相关的 Makefile 清理完成"
+
+echo "开始查找并删除 ImmortalWRT 自带 daed 相关的 Makefile"
+find . -type f -name "Makefile" ! -path "$TARGET_DIR/*" -print0 |
+while IFS= read -r -d $'\0' file; do
+    if [[ "$file" == *"daed"* ]]; then
+        echo "删除 Makefile: $file"
+        rm -f "$file"
+    fi
+done
+echo "ImmortalWRT 自带 daed 相关的 Makefile 清理完成"
 # 克隆仓库
 clone_repo() {
     local repo_url=$1
