@@ -127,14 +127,14 @@ jobs:
     - name: 仅下载 daed 相关源码
       run: |
         cd openwrt
-        make package/custom/luci-app-daed/daed/download || make package/custom/luci-app-daed/daed/download -j1
+        make package/custom/luci-app-daed/daed/download V=s || make package/custom/luci-app-daed/daed/download -j1 V=s
 
     - name: 仅编译 daed 包
       run: |
         cd openwrt
         echo "开始单独编译 daed 包..."
-        make package/custom/luci-app-daed/daed/clean || true
-        make package/custom/luci-app-daed/daed/compile -j$(nproc) || make package/custom/luci-app-daed/daed/compile -j1
+        make package/custom/luci-app-daed/daed/clean V=s || true
+        make package/custom/luci-app-daed/daed/compile -j$(nproc) V=s || make package/custom/luci-app-daed/daed/compile -j1 V=s
 
     - name: 上传 daed ipk 与日志线索
       if: always()
