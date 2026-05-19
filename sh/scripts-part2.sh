@@ -44,7 +44,7 @@ declare -A REPOS=(
     #["https://github.com/immortalwrt/homeproxy"]=""
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
-    ["https://github.com/QiuSimons/luci-app-daed"]="kix"
+    ["https://github.com/QiuSimons/luci-app-daed"]="daed_2026.05.18-r1"
 )
 
 # 删除 mosdns 相关的 Makefile
