@@ -26,6 +26,11 @@ jobs:
             repo_branch: 'mt5000'
             config_file: './config/mt5000.config'
             workflow_name: 'GL-MT5000'
+          - device: Tenda-BE12PRO
+            repo_url: 'https://github.com/sukerxi/m798x-tdbe.git'
+            repo_branch: 'tenda-be12-pro'
+            config_file: './config/be12pro.config'
+            workflow_name: 'Tenda-BE12PRO'
     steps:
     - name: 检出仓库代码
       uses: actions/checkout@main
