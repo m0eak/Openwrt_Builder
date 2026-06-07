@@ -17,6 +17,18 @@ echo "TAG (from libwrt): $TAG"
 echo "TAG2 (from immortalwrt): $TAG2"
 echo "------------------------------------------"
 
+# --- 更新 Golang 版本，修复 mosdns 等 Go 软件包因 Go 版本过低导致的编译失败 ---
+echo ">>> 开始更新 feeds/packages/lang/golang 到 sbwml/packages_lang_golang 25.x"
+rm -rf feeds/packages/lang/golang && echo "已删除旧版 golang"
+git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+if [ $? -eq 0 ]; then
+    echo "Golang 更新完成，当前 Makefile 信息："
+    grep -n "PKG_VERSION\|PKG_RELEASE" feeds/packages/lang/golang/golang/Makefile || true
+else
+    echo "错误: Golang 更新失败"
+    exit 1
+fi
+
 # --- 根据 WORKFLOW_NAME 执行不同的逻辑 ---
 
 # --- 逻辑块 1: 处理 AXT-1800 和 JDC-AX6600 ---
