@@ -6,10 +6,6 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      istore:
-        description: 'istore'
-        required: false
-        default: 'false'
       docker:
         description: '是否编译 docker'
         required: false
@@ -49,6 +45,7 @@ jobs:
           workflow-name: ${{ matrix.workflow_name }}
           repo-url: ${{ env.REPO_URL_IMM }}
           repo-branch: ${{ github.event.inputs.tag || env.REPO_BRANCH }}
+          extra-config-file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
 
   publish_release:
     name: 合并并发布固件

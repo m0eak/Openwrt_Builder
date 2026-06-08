@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 2 */4 * *'
   workflow_dispatch:
+    inputs:
+      docker:
+        description: '是否编译 docker'
+        required: false
+        default: 'false'
 
 jobs:
   build:
@@ -39,6 +44,7 @@ jobs:
           repo-branch: ${{ matrix.repo_branch }}
           install-automake-117: "true"
           sonic-fullcone: ${{ matrix.sonic_fullcone }}
+          extra-config-file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
 
   publish_release:
     name: 合并并发布固件

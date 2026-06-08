@@ -6,10 +6,6 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      istore:
-        description: 'istore'
-        required: false
-        default: 'false'
       docker:
         description: '是否编译docker'
         required: false
@@ -25,7 +21,6 @@ env:
   FEEDS_CONF: feeds.conf.default
   CONFIG_FILE: ./config/immortalwrt.config
   CONFIG_FILE_DOCKER: ./config/docker.config
-  CONFIG_FILE_ISTORE: ./config/istore.config
   DIY_P1_SH: ./sh/scripts-part1.sh
   DIY_P2_SH: ./sh/scripts-part2.sh
   DEFAULT_SETTING: ./default-settings-m0eak
@@ -104,6 +99,9 @@ jobs:
         ls openwrt/package/
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
+        if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
+          cat $CONFIG_FILE_DOCKER >> openwrt/.config
+        fi
         chmod +x $DIY_P2_SH
         cd openwrt
         $GITHUB_WORKSPACE/$DIY_P2_SH

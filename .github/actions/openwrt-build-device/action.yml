@@ -8,6 +8,9 @@ inputs:
   config-file:
     description: Repository config file to move into openwrt/.config.
     required: true
+  extra-config-file:
+    description: Optional repository config fragment appended after the base config.
+    default: ""
   workflow-name:
     description: Logical workflow/device name consumed by custom shell scripts.
     required: true
@@ -163,7 +166,12 @@ runs:
       shell: bash
       run: |
         echo "Extracting LuCI packages from ${{ inputs.config-file }}"
-        grep 'luci-app-' "${{ inputs.config-file }}" | \
+        cp "${{ inputs.config-file }}" package-source.config
+        if [ -n "${{ inputs.extra-config-file }}" ] && [ -e "${{ inputs.extra-config-file }}" ]; then
+          cat "${{ inputs.extra-config-file }}" >> package-source.config
+        fi
+
+        grep 'luci-app-' package-source.config | \
           grep -v '^#' | \
           grep -v 'is not set' | \
           sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
@@ -187,6 +195,9 @@ runs:
         [ -e "$GITHUB_WORKSPACE/${{ inputs.default-setting }}" ] && mv "$GITHUB_WORKSPACE/${{ inputs.default-setting }}" openwrt/package/default-settings-m0eak
         [ -d "$GITHUB_WORKSPACE/files" ] && mv "$GITHUB_WORKSPACE/files" openwrt/files
         [ -e "${{ inputs.config-file }}" ] && mv "${{ inputs.config-file }}" openwrt/.config
+        if [ -n "${{ inputs.extra-config-file }}" ] && [ -e "${{ inputs.extra-config-file }}" ]; then
+          cat "${{ inputs.extra-config-file }}" >> openwrt/.config
+        fi
         cd openwrt
         chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy-p2-sh }}"
         "$GITHUB_WORKSPACE/${{ inputs.diy-p2-sh }}"

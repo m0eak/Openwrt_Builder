@@ -25,7 +25,7 @@
 
 1. GitHub Actions 根据 workflow matrix 选择设备和配置文件。
 2. 克隆对应 OpenWrt/ImmortalWrt 源码。
-3. 执行 `sh/scripts-part1.sh`，处理源码级补丁、默认 IP、vermagic 等前置修改。
+3. 执行 `sh/scripts-part1.sh`，处理源码级补丁、默认 IP 等前置修改。
 4. 更新并安装 feeds。
 5. 注入 `default-settings-m0eak`、`files/` 和设备 `.config`。
 6. 执行 `sh/scripts-part2.sh`，清理冲突 Makefile 并克隆第三方自定义包。

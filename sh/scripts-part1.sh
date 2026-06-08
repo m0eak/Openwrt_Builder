@@ -25,22 +25,6 @@ set_default_ip() {
     echo "$label IP 修改为 $ip"
 }
 
-patch_kernel_vermagic() {
-    if [ ! -s ./vermagic ]; then
-        echo "none vermagic, 跳过修改。"
-        return
-    fi
-
-    sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
-    sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
-}
-
-export_vermagic_fix() {
-    if [ -s ./vermagic ]; then
-        echo "VERMAGIC_FIX=$(cat vermagic)" >> "$GITHUB_ENV"
-    fi
-}
-
 update_golang_feed() {
     rm -rf feeds/packages/lang/golang && echo "已删除旧版 golang"
     git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
@@ -59,27 +43,6 @@ update_golang_feed() {
 if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 libwrt 的特定修改"
 
-    # 定义kernel-6.12文件的路径
-    KERNEL_FILE="./target/linux/generic/kernel-6.12"
-    cat $KERNEL_FILE
-    
-    # 检查文件是否存在
-    if [ ! -f "$KERNEL_FILE" ]; then
-        echo "错误: 找不到文件 $KERNEL_FILE"
-        exit 1
-    fi
-
-    # 提取内核版本号
-    MAJOR_VERSION=$(grep -oP 'LINUX_VERSION-\K[0-9.]+' "$KERNEL_FILE" | head -1)
-    MINOR_VERSION=$(grep -oP 'LINUX_VERSION-[0-9.]+ = \K.[0-9]+' "$KERNEL_FILE" | head -1)
-    KERNEL_VERSION="${MAJOR_VERSION}${MINOR_VERSION}"
-
-    # 验证版本号格式
-    if [[ ! "$KERNEL_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        echo "错误: 无法提取有效的内核版本号"
-    fi
-    echo "提取的内核版本号: $KERNEL_VERSION"
-
     # 修改默认IP
     if [[ "$WORKFLOW_NAME" == "AXT-1800" ]]; then
         set_default_ip "192.168.8.1" "AXT-1800"
@@ -91,15 +54,10 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
     # rm -rf feeds/packages/lang/golang && echo "删除golang"
     # git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
 
-    # 下载对应内核版本的vermagic
-    wget -qO- "https://downloads.immortalwrt.org/snapshots/targets/qualcommax/ipq60xx/kmods/" | grep -oP "$KERNEL_VERSION-1-\K[0-9a-f]+" | head -n 1 > vermagic && echo "当前Vermagic:" && cat vermagic
     wget https://raw.githubusercontent.com/m0eak/openwrt_patch/refs/heads/main/gl-axt1800/9999-gl-axt1800-dts-change-cooling-level.patch && echo "下载成功" || echo "下载失败"
     mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.12/9999-gl-axt1800-dts-change-cooling-level.patch && echo "移动成功" || echo "移动失败"
     rm -f package/kernel/mac80211/patches/nss/ath11k/999-902-ath11k-fix-WDS-by-disabling-nwds.patch && echo "删除patch1成功"
     rm -f package/kernel/mac80211/patches/nss/subsys/999-775-wifi-mac80211-Changes-for-WDS-MLD.patch && echo "删除patch2成功"
-
-    export_vermagic_fix
-    patch_kernel_vermagic
 
 # --- 逻辑块 2: 处理 x86 immortalwrt ---
 elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
@@ -123,15 +81,6 @@ elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
     else
         echo "警告: VERSION2 为空，跳过版本号替换。"
     fi
-
-    # 下载对应内核版本的vermagic
-    if [ -n "$VERSION2" ]; then
-        curl -s "https://downloads.immortalwrt.org/releases/$VERSION2/targets/x86/64/immortalwrt-$VERSION2-x86-64.manifest" | grep kernel | awk '{print $3}' | sed -E 's/.*~([0-9a-f]+)-r[0-9]+$/\1/; s/.*-([0-9a-f]+)$/\1/' > vermagic && echo "Immortalwrt Vermagic Done" && echo "当前Vermagic：" && cat vermagic
-    else
-        echo "警告: VERSION2 为空，无法下载 vermagic。"
-    fi
-
-    patch_kernel_vermagic
 
 # --- 逻辑块 3: 处理 TR-3000 ---
 elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
