@@ -31,9 +31,6 @@
 6. 执行 `sh/scripts-part2.sh`，清理冲突 Makefile 并克隆第三方自定义包。
 7. `make defconfig`、下载依赖、编译固件并上传产物。
 
-## AdGuardHome 说明
-
-`files/etc/AdGuardHome.yaml` 中保留过滤规则订阅 URL。规则缓存目录 `files/etc/AdGuardHome/data/filters/` 不再提交到仓库，避免把过期的运行时缓存打进固件，也减少仓库体积。
 
 ## 本地检查
 
