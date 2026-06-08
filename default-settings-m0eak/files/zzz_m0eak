@@ -86,16 +86,22 @@ if [ -e /sbin/cpuusage ];then
   sed -i 's/HWE:/NSS:/' /sbin/cpuusage
 fi
 
-if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ] && [ "$(grep -c "/proc/sys/vm/drop_caches" /etc/crontabs/root)" -eq '0' ];then
-  echo "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches" >> /etc/crontabs/root
+append_cron_once() {
+  cron_line="$1"
+  cron_file="/etc/crontabs/root"
+
+  mkdir -p "$(dirname "$cron_file")"
+  touch "$cron_file"
+  grep -Fqx "$cron_line" "$cron_file" || echo "$cron_line" >> "$cron_file"
+}
+
+if [ "$( $PACKAGE_MANAGER 2>/dev/null| grep -c "ramfree")" -ne '0' ];then
+  append_cron_once "0 */1 * * * sync && echo 3 > /proc/sys/vm/drop_caches"
 fi
 
-if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ] && [ "$(grep -c "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
-fi
-
-if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ] && [ "$(grep -c "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" /etc/crontabs/root)" -eq '0' ];then
-  echo "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness" >> /etc/crontabs/root
+if [ -e /sys/class/leds/white:system/brightness ] && [ "$(grep -c "AXT1800" /etc/board.json)" -ne '0' ];then
+  append_cron_once "30 23 * * * echo 0 > /sys/class/leds/white:system/brightness"
+  append_cron_once "00 05 * * * echo 1 > /sys/class/leds/white:system/brightness"
 fi
 
 if [ -e /usr/sbin/athena-led ];then
