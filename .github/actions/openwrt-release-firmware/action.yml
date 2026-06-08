@@ -1,0 +1,89 @@
+name: OpenWrt release firmware
+description: Organize one firmware target directory, upload it, create a release, and clean old artifacts.
+
+inputs:
+  upload-firmware:
+    description: Whether to upload the firmware artifact.
+    default: "true"
+  upload-release:
+    description: Whether to create a GitHub release.
+    default: "true"
+  workflow-name:
+    description: Logical workflow name used in the generated release tag.
+    required: true
+  source-tag:
+    description: Source tag or branch used in the generated release tag.
+    required: true
+  release-tag-prefix:
+    description: Prefix prepended to the generated release tag.
+    required: true
+  source-url:
+    description: Source repository URL included in the release body.
+    required: true
+  artifact-name:
+    description: Firmware artifact name.
+    required: true
+  keep-latest:
+    description: Number of releases to keep.
+    default: "10"
+
+runs:
+  using: composite
+  steps:
+    - name: Organize firmware files
+      id: organize
+      if: (inputs.upload-firmware == 'true' || inputs.upload-release == 'true') && !cancelled()
+      shell: bash
+      run: |
+        cd openwrt/bin/targets/*/*
+        rm -rf packages
+        echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
+
+    - name: Upload firmware artifact
+      uses: actions/upload-artifact@main
+      if: inputs.upload-firmware == 'true' && steps.organize.outputs.firmware-path != '' && !cancelled()
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: ${{ steps.organize.outputs.firmware-path }}
+
+    - name: Generate release tag
+      id: release-meta
+      if: inputs.upload-release == 'true' && !cancelled()
+      shell: bash
+      run: |
+        CLEANED_WORKFLOW_NAME=$(echo "${{ inputs.workflow-name }}" | tr -c '[:alnum:]_' '-')
+        CLEANED_SOURCE_TAG=$(echo "${{ inputs.source-tag }}" | tr -c '[:alnum:].-' '-')
+        BASE_TAG="${CLEANED_WORKFLOW_NAME}-${CLEANED_SOURCE_TAG}"
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="${BASE_TAG}-${DATE_SUFFIX}"
+        if [ -z "$RELEASE_TAG" ]; then
+          echo "Generated release tag is empty. Check workflow name and source tag."
+          exit 1
+        fi
+        echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+        echo "Generated release tag: $RELEASE_TAG"
+
+    - name: Release firmware
+      uses: softprops/action-gh-release@v2
+      if: steps.release-meta.outputs.release-tag != '' && !cancelled()
+      with:
+        tag_name: ${{ inputs.release-tag-prefix }}-${{ steps.release-meta.outputs.release-tag }}
+        files: ${{ steps.organize.outputs.firmware-path }}/*
+        body: |
+          源码：${{ inputs.source-url }}
+
+    - name: Delete workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      if: !cancelled()
+      with:
+        retain_days: 5
+        keep_minimum_runs: 5
+
+    - name: Remove old releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      if: inputs.upload-release == 'true' && !cancelled()
+      with:
+        keep_latest: ${{ inputs.keep-latest }}
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
