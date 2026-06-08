@@ -51,6 +51,38 @@ runs:
     - name: Show runner environment
       shell: bash
       run: |
+        echo "::group::Build action inputs"
+        echo "device=${{ inputs.device }}"
+        echo "workflow-name=${{ inputs.workflow-name }}"
+        echo "repo-url=${{ inputs.repo-url }}"
+        echo "repo-branch=${{ inputs.repo-branch }}"
+        echo "config-file=${{ inputs.config-file }}"
+        echo "extra-config-file=${{ inputs.extra-config-file }}"
+        echo "feeds-conf=${{ inputs.feeds-conf }}"
+        echo "diy-p1-sh=${{ inputs.diy-p1-sh }}"
+        echo "diy-p2-sh=${{ inputs.diy-p2-sh }}"
+        echo "default-setting=${{ inputs.default-setting }}"
+        echo "cache-toolchain=${{ inputs.cache-toolchain }}"
+        echo "install-automake-117=${{ inputs.install-automake-117 }}"
+        echo "sonic-fullcone=${{ inputs.sonic-fullcone }}"
+        for path in \
+          "${{ inputs.config-file }}" \
+          "${{ inputs.extra-config-file }}" \
+          "${{ inputs.feeds-conf }}" \
+          "${{ inputs.diy-p1-sh }}" \
+          "${{ inputs.diy-p2-sh }}" \
+          "${{ inputs.default-setting }}" \
+          "files"; do
+          [ -z "$path" ] && continue
+          if [ -e "$path" ]; then
+            echo "exists: $path"
+          else
+            echo "missing: $path"
+          fi
+        done
+        echo "::endgroup::"
+
+        echo "::group::Runner environment"
         echo "================================================="
         echo "GitHub Actions runner environment"
         echo "================================================="
@@ -60,6 +92,7 @@ runs:
         df -hT
         uname -a
         lsb_release -a || true
+        echo "::endgroup::"
 
     - name: Optimize disk space
       uses: hugoalh/disk-space-optimizer-ghaction@v0.8.1
@@ -139,6 +172,11 @@ runs:
         ln -sf /workdir/openwrt "$GITHUB_WORKSPACE/openwrt"
         cd openwrt
         git fetch --tags || true
+        echo "::group::OpenWrt source revision"
+        git log -1 --oneline
+        git remote -v
+        git status --short
+        echo "::endgroup::"
         echo "OPENWRT_PATH=$PWD" >> "$GITHUB_ENV"
         echo "openwrt-path=$PWD" >> "$GITHUB_OUTPUT"
 
@@ -147,6 +185,11 @@ runs:
       run: |
         cd openwrt
         [ -e "$GITHUB_WORKSPACE/${{ inputs.feeds-conf }}" ] && cp "$GITHUB_WORKSPACE/${{ inputs.feeds-conf }}" ./feeds.conf.default
+        echo "::group::Feeds configuration"
+        pwd
+        ls -l feeds.conf.default || true
+        sed -n '1,80p' feeds.conf.default || true
+        echo "::endgroup::"
         ./scripts/feeds update -a
         chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy-p1-sh }}"
         "$GITHUB_WORKSPACE/${{ inputs.diy-p1-sh }}"
@@ -165,11 +208,18 @@ runs:
     - name: Extract LuCI package list
       shell: bash
       run: |
+        echo "::group::LuCI package extraction inputs"
         echo "Extracting LuCI packages from ${{ inputs.config-file }}"
         cp "${{ inputs.config-file }}" package-source.config
         if [ -n "${{ inputs.extra-config-file }}" ] && [ -e "${{ inputs.extra-config-file }}" ]; then
+          echo "Appending extra config: ${{ inputs.extra-config-file }}"
           cat "${{ inputs.extra-config-file }}" >> package-source.config
+        else
+          echo "No extra config appended."
         fi
+        wc -l package-source.config
+        sha256sum package-source.config
+        echo "::endgroup::"
 
         grep 'luci-app-' package-source.config | \
           grep -v '^#' | \
@@ -199,11 +249,17 @@ runs:
           cat "${{ inputs.extra-config-file }}" >> openwrt/.config
         fi
         cd openwrt
+        echo "::group::Pre-defconfig workspace snapshot"
+        pwd
+        ls -ld package/default-settings-m0eak files .config 2>/dev/null || true
+        grep -E '^(CONFIG_TARGET|CONFIG_PACKAGE_(docker|dockerd|luci-app-dockerman|containerd|runc))' .config || true
+        echo "::endgroup::"
         chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy-p2-sh }}"
         "$GITHUB_WORKSPACE/${{ inputs.diy-p2-sh }}"
         make defconfig
-        echo "Current diffconfig:"
+        echo "::group::Current diffconfig"
         ./scripts/diffconfig.sh
+        echo "::endgroup::"
 
     - name: Cache toolchain
       uses: HiGarfield/cachewrtbuild@main
@@ -218,6 +274,10 @@ runs:
       run: |
         cd openwrt
         make download -j"$(nproc)" || make download -j1 V=s
+        echo "::group::Download directory summary"
+        du -sh dl || true
+        find dl -size -1024c -exec ls -l {} \; || true
+        echo "::endgroup::"
         find dl -size -1024c -exec rm -f {} \;
 
     - name: Compile firmware
@@ -240,6 +300,10 @@ runs:
       run: |
         cd openwrt/bin/targets/*/*
         rm -rf packages
+        echo "::group::Firmware files"
+        pwd
+        find . -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
+        echo "::endgroup::"
         echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
         echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
 

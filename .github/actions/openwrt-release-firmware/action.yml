@@ -35,8 +35,23 @@ runs:
       if: (inputs.upload-firmware == 'true' || inputs.upload-release == 'true') && !cancelled()
       shell: bash
       run: |
-        cd openwrt/bin/targets/*/*
+        shopt -s nullglob
+        target_dirs=(openwrt/bin/targets/*/*)
+        if [ "${#target_dirs[@]}" -eq 0 ]; then
+          echo "No firmware target directory found under openwrt/bin/targets/*/*."
+          exit 1
+        fi
+        if [ "${#target_dirs[@]}" -gt 1 ]; then
+          echo "Multiple firmware target directories found:"
+          printf '%s\n' "${target_dirs[@]}"
+          echo "Using the first directory: ${target_dirs[0]}"
+        fi
+        cd "${target_dirs[0]}"
         rm -rf packages
+        echo "::group::Firmware files"
+        pwd
+        find . -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
+        echo "::endgroup::"
         echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
 
     - name: Upload firmware artifact
@@ -61,7 +76,12 @@ runs:
           exit 1
         fi
         echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
-        echo "Generated release tag: $RELEASE_TAG"
+        echo "::group::Release metadata"
+        echo "workflow-name=${{ inputs.workflow-name }}"
+        echo "source-tag=${{ inputs.source-tag }}"
+        echo "release-tag=${{ inputs.release-tag-prefix }}-$RELEASE_TAG"
+        echo "source-url=${{ inputs.source-url }}"
+        echo "::endgroup::"
 
     - name: Release firmware
       uses: softprops/action-gh-release@v2

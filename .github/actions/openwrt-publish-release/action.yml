@@ -26,10 +26,25 @@ runs:
       with:
         path: all-artifacts
 
+    - name: Show downloaded artifact layout
+      shell: bash
+      run: |
+        echo "::group::Downloaded artifacts"
+        find all-artifacts -maxdepth 3 -type f -printf '%p %s bytes\n' | sort
+        echo "::endgroup::"
+
     - name: Prefix generic firmware metadata files
       shell: bash
       run: |
-        for dir in all-artifacts/firmware-*; do
+        shopt -s nullglob
+        firmware_dirs=(all-artifacts/firmware-*)
+        if [ "${#firmware_dirs[@]}" -eq 0 ]; then
+          echo "No firmware artifacts found under all-artifacts/firmware-*."
+          exit 1
+        fi
+
+        echo "::group::Prefix firmware metadata"
+        for dir in "${firmware_dirs[@]}"; do
           DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
           echo "Processing device: $DEVICE_NAME"
           cd "$dir"
@@ -43,6 +58,7 @@ runs:
           fi
           cd ../..
         done
+        echo "::endgroup::"
 
     - name: Generate release tag and body
       id: release-meta
@@ -78,6 +94,11 @@ runs:
           echo "#### $DEVICE_NAME" >> release-body.md
           sed 's/^/- /' "$dir/packages.txt" >> release-body.md
         done
+
+        echo "::group::Release metadata"
+        echo "release-tag=$RELEASE_TAG"
+        sed -n '1,160p' release-body.md
+        echo "::endgroup::"
 
     - name: Create GitHub release
       uses: softprops/action-gh-release@v2

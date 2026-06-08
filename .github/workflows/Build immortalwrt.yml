@@ -36,8 +36,31 @@ jobs:
     - name: Checkout
       uses: actions/checkout@main
 
+    - name: 显示调试上下文
+      run: |
+        echo "::group::Workflow inputs"
+        echo "docker=${{ github.event.inputs.docker }}"
+        echo "tag2=${{ github.event.inputs.tag2 }}"
+        echo "repo-url=$REPO_URL_IMM"
+        echo "repo-branch=$REPO_BRANCH"
+        echo "config-file=$CONFIG_FILE"
+        echo "docker-config=$CONFIG_FILE_DOCKER"
+        echo "feeds-conf=$FEEDS_CONF"
+        echo "diy-p1-sh=$DIY_P1_SH"
+        echo "diy-p2-sh=$DIY_P2_SH"
+        echo "default-setting=$DEFAULT_SETTING"
+        for path in "$CONFIG_FILE" "$CONFIG_FILE_DOCKER" "$FEEDS_CONF" "$DIY_P1_SH" "$DIY_P2_SH" "$DEFAULT_SETTING" "files"; do
+          if [ -e "$path" ]; then
+            echo "exists: $path"
+          else
+            echo "missing: $path"
+          fi
+        done
+        echo "::endgroup::"
+
     - name: 释放磁盘空间
       run: |
+        echo "::group::Disk cleanup"
         echo "清理前磁盘空间："
         df -hT
         # 仅删除最占空间的大型预装软件
@@ -45,6 +68,7 @@ jobs:
         sudo docker image prune --all --force
         echo "清理后磁盘空间："
         df -hT
+        echo "::endgroup::"
 
 
     - name: 初始化环境
@@ -72,16 +96,24 @@ jobs:
         cd openwrt
         git fetch --tags # 获取最新的标签
         git checkout "tags/${TAG2}" || git checkout "${TAG2}" # 尝试检出标签，如果失败则尝试检出分支
+        echo "::group::OpenWrt source revision"
+        git log -1 --oneline
+        git remote -v
+        git status --short
+        echo "::endgroup::"
         echo "OPENWRT_PATH=$PWD" >> $GITHUB_ENV
         
     - name: 加载自定义源
       run: |
         echo "WORKFLOW_NAME=x86_immortalwrt" >> $GITHUB_ENV
-        cat $GITHUB_OUTPUT
-        cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
         chmod +x $DIY_P1_SH
         cd openwrt
+        echo "::group::Feeds configuration"
+        pwd
+        ls -l feeds.conf.default || true
+        sed -n '1,80p' feeds.conf.default || true
+        echo "::endgroup::"
         ./scripts/feeds update -a
         $GITHUB_WORKSPACE/$DIY_P1_SH
 
@@ -94,9 +126,7 @@ jobs:
     - name: 加载自定义配置
       run: |
         echo "WORKFLOW_NAME=x86_immortalwrt" >> $GITHUB_ENV
-        cat $GITHUB_OUTPUT
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
-        ls openwrt/package/
         [ -e files ] && mv ./files openwrt/files
         [ -e $CONFIG_FILE ] && mv $CONFIG_FILE openwrt/.config
         if [ "${{ github.event.inputs.docker }}" = "true" ] && [ -e $CONFIG_FILE_DOCKER ]; then
@@ -104,10 +134,16 @@ jobs:
         fi
         chmod +x $DIY_P2_SH
         cd openwrt
+        echo "::group::Pre-defconfig workspace snapshot"
+        pwd
+        ls -ld package/default-settings-m0eak files .config 2>/dev/null || true
+        grep -E '^(CONFIG_TARGET|CONFIG_PACKAGE_(docker|dockerd|luci-app-dockerman|containerd|runc))' .config || true
+        echo "::endgroup::"
         $GITHUB_WORKSPACE/$DIY_P2_SH
         make defconfig
-        echo "当前diffconfig:"
+        echo "::group::当前 diffconfig"
         ./scripts/diffconfig.sh        
+        echo "::endgroup::"
 
     - name: 检查并恢复缓存
       id: check-cache
@@ -125,6 +161,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        echo "cache-hit=${{ steps.check-cache.outputs.cache-hit }}"
         if [ "${{ steps.check-cache.outputs.cache-hit }}" == "true" ]; then
           echo "缓存命中，更新时间戳..."
           cd openwrt
@@ -160,7 +197,10 @@ jobs:
       run: |
          cd openwrt
          make download -j8
+         echo "::group::Download directory summary"
+         du -sh dl || true
          find dl -size -1024c -exec ls -l {} \;
+         echo "::endgroup::"
          find dl -size -1024c -exec rm -f {} \;
 
     - name: 编译固件
@@ -178,6 +218,11 @@ jobs:
           echo "device-name=$(cat DEVICE_NAME)" >> $GITHUB_OUTPUT
         fi
         echo "file-date=$(date +"%Y%m%d%H%M")" >> $GITHUB_OUTPUT
+        echo "::group::Compile outputs"
+        echo "device-name=$(cat DEVICE_NAME 2>/dev/null || true)"
+        echo "file-date=$(date +"%Y%m%d%H%M")"
+        find bin/targets -maxdepth 3 -type f -printf '%p %s bytes\n' | sort || true
+        echo "::endgroup::"
 
     - name: 检查空间使用情况
       if: (!cancelled())
