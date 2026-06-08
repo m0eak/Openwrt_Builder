@@ -22,7 +22,6 @@ env:
 jobs:
   build:
     name: 编译 ${{ matrix.device }}
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -33,19 +32,14 @@ jobs:
           - device: JDC-AX6600
             config_file: ./config/jdcax6600.config
             workflow_name: JDC-AX6600
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@main
-
-      - name: Build ${{ matrix.device }}
-        uses: ./.github/actions/openwrt-build-device
-        with:
-          device: ${{ matrix.device }}
-          config-file: ${{ matrix.config_file }}
-          workflow-name: ${{ matrix.workflow_name }}
-          repo-url: ${{ env.REPO_URL_IMM }}
-          repo-branch: ${{ github.event.inputs.tag || env.REPO_BRANCH }}
-          extra-config-file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
+    uses: ./.github/workflows/_openwrt-build-device.yml
+    with:
+      device: ${{ matrix.device }}
+      config_file: ${{ matrix.config_file }}
+      workflow_name: ${{ matrix.workflow_name }}
+      repo_url: https://github.com/m0eak/libwrt.git
+      repo_branch: ${{ github.event.inputs.tag || '25.12.4' }}
+      extra_config_file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
 
   publish_release:
     name: 合并并发布固件

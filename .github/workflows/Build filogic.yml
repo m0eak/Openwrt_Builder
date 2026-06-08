@@ -13,7 +13,6 @@ on:
 jobs:
   build:
     name: 编译 ${{ matrix.device }}
-    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
@@ -30,21 +29,16 @@ jobs:
             config_file: ./config/be12pro.config
             workflow_name: Tenda-BE12PRO
             sonic_fullcone: "false"
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@main
-
-      - name: Build ${{ matrix.device }}
-        uses: ./.github/actions/openwrt-build-device
-        with:
-          device: ${{ matrix.device }}
-          config-file: ${{ matrix.config_file }}
-          workflow-name: ${{ matrix.workflow_name }}
-          repo-url: ${{ matrix.repo_url }}
-          repo-branch: ${{ matrix.repo_branch }}
-          install-automake-117: "true"
-          sonic-fullcone: ${{ matrix.sonic_fullcone }}
-          extra-config-file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
+    uses: ./.github/workflows/_openwrt-build-device.yml
+    with:
+      device: ${{ matrix.device }}
+      config_file: ${{ matrix.config_file }}
+      workflow_name: ${{ matrix.workflow_name }}
+      repo_url: ${{ matrix.repo_url }}
+      repo_branch: ${{ matrix.repo_branch }}
+      install_automake_117: "true"
+      sonic_fullcone: ${{ matrix.sonic_fullcone }}
+      extra_config_file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
 
   publish_release:
     name: 合并并发布固件

@@ -14,7 +14,8 @@
 
 ## 目录结构
 
-- `.github/workflows/`：GitHub Actions 构建与测试入口。
+- `.github/workflows/`：GitHub Actions 构建与发布入口；`_openwrt-build-device.yml` 是 IPQ/filogic 共享的可复用长构建流程。
+- `.github/actions/`：发布阶段使用的本地 composite actions。
 - `config/`：各设备的 OpenWrt `.config` 配置片段。
 - `sh/scripts-part1.sh`：feeds 更新前执行的设备特定源码修改。
 - `sh/scripts-part2.sh`：feeds 安装后执行的自定义包注入与冲突包清理。
