@@ -1,0 +1,101 @@
+name: OpenWrt publish release
+description: Merge per-device artifacts, generate a release body, publish a GitHub release, and clean old runs.
+
+inputs:
+  release-tag-prefix:
+    description: Prefix for the generated release tag.
+    required: true
+  source-url:
+    description: Source repository URL to include in release body.
+    default: ""
+  source-branch:
+    description: Source branch/tag to include in release body.
+    default: ""
+  release-files:
+    description: Newline-separated glob list passed to softprops/action-gh-release.
+    required: true
+  keep-latest:
+    description: Number of releases to keep.
+    default: "10"
+
+runs:
+  using: composite
+  steps:
+    - name: Download firmware artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-artifacts
+
+    - name: Prefix generic firmware metadata files
+      shell: bash
+      run: |
+        for dir in all-artifacts/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "Processing device: $DEVICE_NAME"
+          cd "$dir"
+          for file in version.buildinfo sha256sums profiles.json config.buildinfo feeds.buildinfo; do
+            if [ -f "$file" ]; then
+              mv "$file" "${DEVICE_NAME}-${file}"
+            fi
+          done
+          if [ -f "${DEVICE_NAME}-sha256sums" ]; then
+            sed -i "s/ \*/ ${DEVICE_NAME}-/" "${DEVICE_NAME}-sha256sums"
+          fi
+          cd ../..
+        done
+
+    - name: Generate release tag and body
+      id: release-meta
+      shell: bash
+      run: |
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="${{ inputs.release-tag-prefix }}-${DATE_SUFFIX}"
+        echo "release_tag=$RELEASE_TAG" >> "$GITHUB_ENV"
+        echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+        echo "### Firmware download" > release-body.md
+        echo "" >> release-body.md
+        echo "This release includes firmware for:" >> release-body.md
+        for dir in all-artifacts/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "- **$DEVICE_NAME**" >> release-body.md
+        done
+
+        if [ -n "${{ inputs.source-url }}" ]; then
+          echo "" >> release-body.md
+          echo "**Source repository:** \`${{ inputs.source-url }}\`" >> release-body.md
+        fi
+        if [ -n "${{ inputs.source-branch }}" ]; then
+          echo "**Source branch/tag:** \`${{ inputs.source-branch }}\`" >> release-body.md
+        fi
+
+        echo "" >> release-body.md
+        echo "---" >> release-body.md
+        echo "### LuCI package list" >> release-body.md
+        for dir in all-artifacts/package-list-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          echo "" >> release-body.md
+          echo "#### $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
+        done
+
+    - name: Create GitHub release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release-meta.outputs.release-tag }}
+        body_path: release-body.md
+        files: ${{ inputs.release-files }}
+
+    - name: Delete old releases
+      uses: dev-drprasad/delete-older-releases@v0.1.0
+      with:
+        keep_latest: ${{ inputs.keep-latest }}
+        delete_tags: true
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: Delete old workflow runs
+      uses: GitRML/delete-workflow-runs@main
+      with:
+        retain_days: 5
+        keep_minimum_runs: 5
