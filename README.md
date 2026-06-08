@@ -1,32 +1,57 @@
- [中文](https://p3terx.com/archives/build-openwrt-with-github-actions.html)
+# OpenWrt Builder
 
-# Actions-OpenWrt
+这是一个基于 GitHub Actions 的 OpenWrt/ImmortalWrt 固件构建仓库，主要用于按设备配置自动拉取源码、注入自定义包、应用默认设置并产出固件。
 
-[![LICENSE](https://img.shields.io/github/license/mashape/apistatus.svg?style=flat-square&label=LICENSE)](https://github.com/P3TERX/Actions-OpenWrt/blob/master/LICENSE)
-![GitHub Stars](https://img.shields.io/github/stars/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Stars&logo=github)
-![GitHub Forks](https://img.shields.io/github/forks/P3TERX/Actions-OpenWrt.svg?style=flat-square&label=Forks&logo=github)
+## 支持设备
 
-## Usage
+- GL.iNet AXT-1800，默认 IP：`192.168.8.1`
+- JDC-AX6600，默认 IP：`192.168.100.1`
+- GL-MT5000，默认 IP：`192.168.100.1`
+- GL-MT3600BE，默认 IP：`192.168.9.1`
+- Tenda BE12 Pro
+- TR-3000，默认 IP：`192.168.6.1`
+- x86 ImmortalWrt，默认 IP：`192.168.100.1`
 
-- 支持GL-inet AXT-1800(192.168.8.1), TR-3000机型(192.168.6.1)，JDC-AX6600(192.168.100.1)，MT5000（仅保证WAN-LAN，不保证LAN-LAN），默认无密码。
+## 目录结构
 
-## Credits
+- `.github/workflows/`：GitHub Actions 构建与测试入口。
+- `config/`：各设备的 OpenWrt `.config` 配置片段。
+- `sh/scripts-part1.sh`：feeds 更新前执行的设备特定源码修改。
+- `sh/scripts-part2.sh`：feeds 安装后执行的自定义包注入与冲突包清理。
+- `default-settings-m0eak/`：自定义默认设置包。
+- `files/`：OpenWrt rootfs overlay，会被复制到构建树的 `openwrt/files`。
 
-- [Microsoft Azure](https://azure.microsoft.com)
-- [GitHub Actions](https://github.com/features/actions)
+## 构建流程
+
+1. GitHub Actions 根据 workflow matrix 选择设备和配置文件。
+2. 克隆对应 OpenWrt/ImmortalWrt 源码。
+3. 执行 `sh/scripts-part1.sh`，处理源码级补丁、默认 IP、vermagic 等前置修改。
+4. 更新并安装 feeds。
+5. 注入 `default-settings-m0eak`、`files/` 和设备 `.config`。
+6. 执行 `sh/scripts-part2.sh`，清理冲突 Makefile 并克隆第三方自定义包。
+7. `make defconfig`、下载依赖、编译固件并上传产物。
+
+## AdGuardHome 说明
+
+`files/etc/AdGuardHome.yaml` 中保留过滤规则订阅 URL。规则缓存目录 `files/etc/AdGuardHome/data/filters/` 不再提交到仓库，避免把过期的运行时缓存打进固件，也减少仓库体积。
+
+## 本地检查
+
+在有 Bash 的环境中，可以先做脚本语法检查：
+
+```bash
+bash -n sh/scripts-part1.sh
+bash -n sh/scripts-part2.sh
+```
+
+完整固件构建建议在 GitHub Actions 中验证。
+
+## 致谢
+
+- [P3TERX/Actions-OpenWrt](https://github.com/P3TERX/Actions-OpenWrt)
 - [OpenWrt](https://github.com/openwrt/openwrt)
-- [JiaY-shi/openwrt](https://github.com/JiaY-shi/openwrt.git)
-- [tmate](https://github.com/tmate-io/tmate)
-- [mxschmitt/action-tmate](https://github.com/mxschmitt/action-tmate)
-- [csexton/debugger-action](https://github.com/csexton/debugger-action)
-- [Cowtransfer](https://cowtransfer.com)
-- [WeTransfer](https://wetransfer.com/)
-- [Mikubill/transfer](https://github.com/Mikubill/transfer)
-- [softprops/action-gh-release](https://github.com/softprops/action-gh-release)
-- [ActionsRML/delete-workflow-runs](https://github.com/ActionsRML/delete-workflow-runs)
-- [dev-drprasad/delete-older-releases](https://github.com/dev-drprasad/delete-older-releases)
-- [peter-evans/repository-dispatch](https://github.com/peter-evans/repository-dispatch)
+- [ImmortalWrt](https://github.com/immortalwrt/immortalwrt)
 
 ## License
 
-[MIT](https://github.com/P3TERX/Actions-OpenWrt/blob/main/LICENSE) © [**P3TERX**](https://p3terx.com)
+[MIT](LICENSE)

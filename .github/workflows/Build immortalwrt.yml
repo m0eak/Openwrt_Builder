@@ -63,7 +63,7 @@ jobs:
           sudo timedatectl set-timezone "$TZ"
           sudo mkdir -p /workdir
           sudo chown $USER:$GROUPS /workdir
-          echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+          echo "WORKFLOW_NAME=x86_immortalwrt" >> $GITHUB_ENV
           echo "TAG2=${{ github.event.inputs.tag2 }}" | tr ' ' '_' >> $GITHUB_ENV
 
 
@@ -81,7 +81,7 @@ jobs:
         
     - name: 加载自定义源
       run: |
-        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=x86_immortalwrt" >> $GITHUB_ENV
         cat $GITHUB_OUTPUT
         cat $GITHUB_ENV
         [ -e $FEEDS_CONF ] && mv $FEEDS_CONF openwrt/feeds.conf.default
@@ -98,7 +98,7 @@ jobs:
 
     - name: 加载自定义配置
       run: |
-        echo "WORKFLOW_NAME=x86_immortalwrt" | tr ' ' '_' >> $GITHUB_OUTPUT
+        echo "WORKFLOW_NAME=x86_immortalwrt" >> $GITHUB_ENV
         cat $GITHUB_OUTPUT
         [ -e $DEFAULT_SETTING ] && mv $DEFAULT_SETTING openwrt/package/default-settings-m0eak
         ls openwrt/package/

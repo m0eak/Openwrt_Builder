@@ -17,6 +17,42 @@ echo "TAG (from libwrt): $TAG"
 echo "TAG2 (from immortalwrt): $TAG2"
 echo "------------------------------------------"
 
+set_default_ip() {
+    local ip="$1"
+    local label="$2"
+
+    sed -i "s/192.168.1.1/$ip/g" package/base-files/files/bin/config_generate
+    echo "$label IP 修改为 $ip"
+}
+
+patch_kernel_vermagic() {
+    if [ ! -s ./vermagic ]; then
+        echo "none vermagic, 跳过修改。"
+        return
+    fi
+
+    sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
+    sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
+}
+
+export_vermagic_fix() {
+    if [ -s ./vermagic ]; then
+        echo "VERMAGIC_FIX=$(cat vermagic)" >> "$GITHUB_ENV"
+    fi
+}
+
+update_golang_feed() {
+    rm -rf feeds/packages/lang/golang && echo "已删除旧版 golang"
+    git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+    if [ $? -eq 0 ]; then
+        echo "Golang 更新完成，当前 Makefile 信息："
+        grep -n "PKG_VERSION\|PKG_RELEASE" feeds/packages/lang/golang/golang/Makefile || true
+    else
+        echo "错误: Golang 更新失败"
+        exit 1
+    fi
+}
+
 # --- 根据 WORKFLOW_NAME 执行不同的逻辑 ---
 
 # --- 逻辑块 1: 处理 AXT-1800 和 JDC-AX6600 ---
@@ -46,11 +82,9 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
 
     # 修改默认IP
     if [[ "$WORKFLOW_NAME" == "AXT-1800" ]]; then
-        sed -i 's/192.168.1.1/192.168.8.1/g' package/base-files/files/bin/config_generate
-        echo "AXT-1800 IP 修改为 192.168.8.1"
+        set_default_ip "192.168.8.1" "AXT-1800"
     elif [[ "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
-        sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
-        echo "JDC-AX6600 IP 修改为 192.168.100.1"
+        set_default_ip "192.168.100.1" "JDC-AX6600"
     fi
 
     # 更新Golang版本（当前已停用，保留注释便于回滚）
@@ -64,16 +98,8 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
     rm -f package/kernel/mac80211/patches/nss/ath11k/999-902-ath11k-fix-WDS-by-disabling-nwds.patch && echo "删除patch1成功"
     rm -f package/kernel/mac80211/patches/nss/subsys/999-775-wifi-mac80211-Changes-for-WDS-MLD.patch && echo "删除patch2成功"
 
-    VERMAGIC=$(cat vermagic)
-    echo "VERMAGIC_FIX=${VERMAGIC}" >> $GITHUB_ENV
-
-    # 修改vermagic
-    if [ ! -s ./vermagic ]; then
-        echo "none vermagic"
-    else
-        sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
-        sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
-    fi
+    export_vermagic_fix
+    patch_kernel_vermagic
 
 # --- 逻辑块 2: 处理 x86 immortalwrt ---
 elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
@@ -89,8 +115,7 @@ elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
     # cat feeds/packages/lang/golang/golang/Makefile
 
     # 修改默认IP
-    sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
-    echo "x86 IP 修改为 192.168.100.1"
+    set_default_ip "192.168.100.1" "x86"
 
     # 修改版本号
     if [ -n "$VERSION2" ]; then
@@ -106,13 +131,7 @@ elif [[ "$WORKFLOW_NAME" == "x86_immortalwrt" ]]; then
         echo "警告: VERSION2 为空，无法下载 vermagic。"
     fi
 
-    # 修改vermagic
-    if [ -s ./vermagic ]; then
-        sed -i '/grep '\''=\[ym\]'\'' $(LINUX_DIR)\/\.config\.set | LC_ALL=C sort | $(MKHASH) md5 > $(LINUX_DIR)\/\.vermagic/s/^/# /' ./include/kernel-defaults.mk
-        sed -i '/$(LINUX_DIR)\/\.vermagic/a \\tcp $(TOPDIR)/vermagic $(LINUX_DIR)/.vermagic' ./include/kernel-defaults.mk
-    else
-        echo "none vermagic, 跳过修改。"
-    fi
+    patch_kernel_vermagic
 
 # --- 逻辑块 3: 处理 TR-3000 ---
 elif [[ "$WORKFLOW_NAME" == "TR-3000" ]]; then
@@ -145,27 +164,17 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
         exit 1
     fi
 
-    sed -i 's/192.168.1.1/192.168.9.1/g' package/base-files/files/bin/config_generate
-    echo "mt3600be IP 修改为 192.168.9.1"
+    set_default_ip "192.168.9.1" "mt3600be"
 
 # --- 逻辑块 5: 处理 GL-MT5000 ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
-    sed -i 's/192.168.1.1/192.168.100.1/g' package/base-files/files/bin/config_generate
-    echo "mt5000 IP 修改为 192.168.100.1"
+    set_default_ip "192.168.100.1" "mt5000"
 
 # --- 逻辑块 6: 处理 Tenda-BE12PRO ---
 elif [[ "$WORKFLOW_NAME" == "Tenda-BE12PRO" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始更新 Golang 以修复 mosdns 编译"
-    rm -rf feeds/packages/lang/golang && echo "已删除旧版 golang"
-    git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
-    if [ $? -eq 0 ]; then
-        echo "Golang 更新完成，当前 Makefile 信息："
-        grep -n "PKG_VERSION\|PKG_RELEASE" feeds/packages/lang/golang/golang/Makefile || true
-    else
-        echo "错误: Golang 更新失败"
-        exit 1
-    fi
+    update_golang_feed
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
