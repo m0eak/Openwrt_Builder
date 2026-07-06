@@ -1,0 +1,8 @@
+*.sh text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.config text eol=lf
+Makefile text eol=lf
+.gitattributes text eol=lf
+default-settings-m0eak/files/zzz_m0eak text eol=lf
