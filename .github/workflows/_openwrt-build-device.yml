@@ -225,40 +225,6 @@ jobs:
           cd openwrt
           curl -sSL https://raw.githubusercontent.com/mufeng05/openwrt-sonic-fullcone/master/add_sonic_fullcone.sh | bash
 
-      - name: Extract LuCI package list
-        shell: bash
-        run: |
-          echo "::group::LuCI package extraction inputs"
-          echo "Extracting LuCI packages from ${{ inputs.config_file }}"
-          cp "${{ inputs.config_file }}" package-source.config
-          if [ -n "${{ inputs.extra_config_file }}" ] && [ -e "${{ inputs.extra_config_file }}" ]; then
-            echo "Appending extra config: ${{ inputs.extra_config_file }}"
-            cat "${{ inputs.extra_config_file }}" >> package-source.config
-          else
-            echo "No extra config appended."
-          fi
-          wc -l package-source.config
-          sha256sum package-source.config
-          echo "::endgroup::"
-
-          grep 'luci-app-' package-source.config | \
-            grep -v '^#' | \
-            grep -v 'is not set' | \
-            sed -e 's/CONFIG_PACKAGE_//g' -e 's/=y//g' | \
-            sort > packages.txt || true
-
-          if [ -s packages.txt ]; then
-            cat packages.txt
-          else
-            echo "No LuCI package information found." > packages.txt
-          fi
-
-      - name: Upload package list artifact
-        uses: actions/upload-artifact@main
-        with:
-          name: package-list-${{ inputs.device }}
-          path: ${{ github.workspace }}/packages.txt
-
       - name: Apply custom config and run custom script part 2
         shell: bash
         run: |
@@ -326,6 +292,36 @@ jobs:
           echo "::endgroup::"
           echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
           echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
+
+      - name: Extract LuCI package list from final build config
+        shell: bash
+        run: |
+          CONFIG_BUILDINFO="${{ steps.organize.outputs.firmware-path }}/config.buildinfo"
+          echo "::group::LuCI package extraction from final config"
+          echo "Extracting LuCI packages from $CONFIG_BUILDINFO"
+          if [ ! -s "$CONFIG_BUILDINFO" ]; then
+            echo "ERROR: final config.buildinfo not found or empty: $CONFIG_BUILDINFO" >&2
+            exit 1
+          fi
+          wc -l "$CONFIG_BUILDINFO"
+          sha256sum "$CONFIG_BUILDINFO"
+
+          grep -E '^CONFIG_PACKAGE_luci-app-[^=]+=[ym]$' "$CONFIG_BUILDINFO" | \
+            sed -e 's/^CONFIG_PACKAGE_//g' -e 's/=[ym]$//g' | \
+            sort > "$GITHUB_WORKSPACE/packages.txt" || true
+
+          if [ -s "$GITHUB_WORKSPACE/packages.txt" ]; then
+            cat "$GITHUB_WORKSPACE/packages.txt"
+          else
+            echo "No LuCI package information found in final build config." > "$GITHUB_WORKSPACE/packages.txt"
+          fi
+          echo "::endgroup::"
+
+      - name: Upload package list artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: package-list-${{ inputs.device }}
+          path: ${{ github.workspace }}/packages.txt
 
       - name: Upload firmware artifact
         uses: actions/upload-artifact@main
