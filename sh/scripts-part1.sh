@@ -25,18 +25,6 @@ set_default_ip() {
     echo "$label IP 修改为 $ip"
 }
 
-update_golang_feed() {
-    rm -rf feeds/packages/lang/golang && echo "已删除旧版 golang"
-    git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
-    if [ $? -eq 0 ]; then
-        echo "Golang 更新完成，当前 Makefile 信息："
-        grep -n "PKG_VERSION\|PKG_RELEASE" feeds/packages/lang/golang/golang/Makefile || true
-    else
-        echo "错误: Golang 更新失败"
-        exit 1
-    fi
-}
-
 # --- 根据 WORKFLOW_NAME 执行不同的逻辑 ---
 
 # --- 逻辑块 1: 处理 AXT-1800 和 JDC-AX6600 ---
@@ -120,10 +108,6 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
     set_default_ip "192.168.100.1" "mt5000"
 
-# --- 逻辑块 6: 处理 Tenda-BE12PRO ---
-elif [[ "$WORKFLOW_NAME" == "Tenda-BE12PRO" ]]; then
-    echo ">>> 检测到设备: $WORKFLOW_NAME。开始更新 Golang 以修复 mosdns 编译"
-    update_golang_feed
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
 fi
