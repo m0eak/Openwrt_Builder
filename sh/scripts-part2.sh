@@ -43,6 +43,7 @@ declare -A REPOS=(
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
     ["https://github.com/QiuSimons/luci-app-daed"]=""
+    ["https://github.com/xuanranran/openwrt-clouddrive2"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
