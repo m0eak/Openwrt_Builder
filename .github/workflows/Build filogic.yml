@@ -24,8 +24,8 @@ jobs:
             workflow_name: GL-MT5000
             sonic_fullcone: "true"
           - device: Tenda-BE12PRO
-            repo_url: https://github.com/sukerxi/m798x-tdbe.git
-            repo_branch: tenda-be12-pro
+            repo_url: https://github.com/chasey-dev/immortalwrt-mt798x-rebase.git
+            repo_branch: 25.12-dev-wifi7
             config_file: ./config/be12pro.config
             workflow_name: Tenda-BE12PRO
             sonic_fullcone: "false"
