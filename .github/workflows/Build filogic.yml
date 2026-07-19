@@ -19,7 +19,7 @@ jobs:
         include:
           - device: GL-MT5000
             repo_url: https://github.com/m0eak/fanchmwrt.git
-            repo_branch: mt5000-rtl8366ub-stitch
+            repo_branch: mt5000-dsa-dmt
             config_file: ./config/mt5000.config
             workflow_name: GL-MT5000
             sonic_fullcone: "true"
