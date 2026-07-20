@@ -106,17 +106,12 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
 # --- 逻辑块 5: 处理 GL-MT5000 ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
-    # 源码分支: m0eak/fanchmwrt @ mt5000-dsa-dmt (RTL8371C SDK + DSA glue)
+    # 源码分支: m0eak/fanchmwrt @ mt5000 (clean device support; switch experiments paused)
     set_default_ip "192.168.100.1" "mt5000"
     if [ -d package/kernel/rtl8366ub ]; then
-        echo "mt5000: found package/kernel/rtl8366ub (DSA path OK)"
-        if grep -q 'rtl8366ub_dsa.o' package/kernel/rtl8366ub/src/Makefile 2>/dev/null; then
-            echo "mt5000: src/Makefile wires rtl8366ub_dsa.o"
-        else
-            echo "WARNING: rtl8366ub_dsa.o not in src/Makefile — unexpected for mt5000-dsa-dmt"
-        fi
+        echo "mt5000: note: package/kernel/rtl8366ub present (unexpected on clean mt5000)"
     else
-        echo "WARNING: package/kernel/rtl8366ub missing — check repo_branch mt5000-dsa-dmt"
+        echo "mt5000: no vendor rtl8366ub package (expected on clean mt5000)"
     fi
 
 else
