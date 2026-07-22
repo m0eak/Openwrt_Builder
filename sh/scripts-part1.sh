@@ -106,7 +106,13 @@ elif [[ "$WORKFLOW_NAME" == "GL-MT3600BE" ]]; then
 # --- 逻辑块 5: 处理 GL-MT5000 ---
 elif [[ "$WORKFLOW_NAME" == "GL-MT5000" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 MT5000 的特定修改"
+    # 源码分支: m0eak/fanchmwrt @ mt5000 (clean device support; switch experiments paused)
     set_default_ip "192.168.100.1" "mt5000"
+    if [ -d package/kernel/rtl8366ub ]; then
+        echo "mt5000: note: package/kernel/rtl8366ub present (unexpected on clean mt5000)"
+    else
+        echo "mt5000: no vendor rtl8366ub package (expected on clean mt5000)"
+    fi
 
 else
     echo ">>> 未匹配到任何已知的 WORKFLOW_NAME ('$WORKFLOW_NAME')。跳过所有设备特定的修改"
