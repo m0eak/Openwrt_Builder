@@ -38,7 +38,7 @@ jobs:
       config_file: ${{ matrix.config_file }}
       workflow_name: ${{ matrix.workflow_name }}
       repo_url: https://github.com/m0eak/libwrt.git
-      repo_branch: ${{ github.event.inputs.tag || '25.12.4' }}
+      repo_branch: ${{ github.event.inputs.tag || '25.12.5' }}
       extra_config_file: ${{ github.event.inputs.docker == 'true' && './config/docker.config' || '' }}
 
   publish_release:
