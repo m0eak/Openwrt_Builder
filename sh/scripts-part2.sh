@@ -51,6 +51,7 @@ CONFLICTING_MAKEFILE_KEYWORDS=(
     "luci-app-lucky"
     "smartdns"
     "v2ray-geodata"
+    "xray-core"
     "daed"
 )
 
