@@ -44,6 +44,7 @@ declare -A REPOS=(
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
     ["https://github.com/QiuSimons/luci-app-daed"]=""
     ["https://github.com/sirpdboy/luci-app-ddns-go.git"]=""
+    ["https://github.com/tty228/luci-app-wechatpush.git"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
