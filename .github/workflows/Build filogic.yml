@@ -18,7 +18,7 @@ jobs:
       matrix:
         include:
           - device: GL-MT5000
-            repo_url: https://github.com/m0eak/fanchmwrt.git
+            repo_url: https://github.com/GLiNet-Tech/openwrt.git
             repo_branch: mt5000
             config_file: ./config/mt5000.config
             workflow_name: GL-MT5000
