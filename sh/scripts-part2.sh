@@ -43,6 +43,7 @@ declare -A REPOS=(
     ["https://github.com/10000ge10000/luci-app-openclaw"]=""
     ["https://github.com/Slava-Shchipunov/awg-openwrt"]=""
     ["https://github.com/QiuSimons/luci-app-daed"]=""
+    ["https://github.com/sirpdboy/luci-app-ddns-go.git"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
@@ -53,6 +54,7 @@ CONFLICTING_MAKEFILE_KEYWORDS=(
     "v2ray-geodata"
     "xray-core"
     "daed"
+    "ddns-go"
 )
 
 patch_rust_makefile() {
