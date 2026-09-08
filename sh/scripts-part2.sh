@@ -33,7 +33,6 @@ declare -A REPOS=(
     ["https://github.com/Tokisaki-Galaxy/luci-app-tailscale-community.git"]=""
     ["https://github.com/m0eak/openwrt-gecoosac.git"]=""
     ["https://github.com/miaoermua/luci-app-leigod-acc.git"]=""
-    ["https://github.com/nikkinikki-org/OpenWrt-momo"]=""
     ["https://github.com/EasyTier/luci-app-easytier"]="v2.6.4"
     ["https://github.com/Openwrt-Passwall/openwrt-passwall2"]=""
     ["https://github.com/Openwrt-Passwall/openwrt-passwall"]=""
