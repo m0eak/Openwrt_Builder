@@ -45,6 +45,8 @@ declare -A REPOS=(
     ["https://github.com/QiuSimons/luci-app-daed"]=""
     ["https://github.com/sirpdboy/luci-app-ddns-go.git"]=""
     ["https://github.com/tty228/luci-app-wechatpush.git"]=""
+    ["https://github.com/gaoderby/luci-app-kms.git"]=""
+    ["https://github.com/sbwml/luci-app-ramfree.git"]=""
 )
 
 CONFLICTING_MAKEFILE_KEYWORDS=(
@@ -149,8 +151,25 @@ verify_turboacc_makefile() {
     echo "找到 turboacc Makefile，继续执行"
 }
 
+flatten_feed_layout_repos() {
+    # gaoderby/luci-app-kms 是 feed 布局 (package/network/vlmcsd + luci/applications/luci-app-vlmcsd)
+    # 直接放在 package/custom/ 下不会被扫描，需展开为独立包目录
+    local feed_dir="$TARGET_DIR/luci-app-kms"
+
+    if [ ! -d "$feed_dir" ]; then
+        return 0
+    fi
+
+    echo "展开 feed 布局仓库: luci-app-kms"
+    mv "$feed_dir/package/network/vlmcsd" "$TARGET_DIR/vlmcsd"
+    mv "$feed_dir/luci/applications/luci-app-vlmcsd" "$TARGET_DIR/luci-app-vlmcsd"
+    rm -rf "$feed_dir"
+    echo "已展开: package/custom/vlmcsd + package/custom/luci-app-vlmcsd"
+}
+
 patch_rust_makefile
 reset_custom_package_dir
 remove_conflicting_makefiles
 clone_custom_repos
+flatten_feed_layout_repos
 verify_turboacc_makefile
