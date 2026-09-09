@@ -63,7 +63,11 @@ on:
 jobs:
   build:
     name: 编译 ${{ inputs.device }}
-    runs-on: ubuntu-22.04
+    # 锁定 20260831 镜像：9/8 该版本 step6 仅 5 分钟通过；9/8 09:28 UTC 新镜像
+    # (20260907.292) 上 immortalwrt init + gnu.org 下载均触发 runner lost
+    # communication。回退到验证过的旧版带日期 label。
+    # ubuntu-22.04 于 2026-09-17 起弃用，届时若 label 失效需迁移到 ubuntu-24.04。
+    runs-on: ubuntu-22.04-20260831
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
@@ -181,7 +185,20 @@ jobs:
           BUILD_DIR=/workdir/automake-1.17-build
           mkdir -p "$BUILD_DIR"
           cd "$BUILD_DIR"
-          curl -fL https://ftp.gnu.org/gnu/automake/automake-1.17.tar.xz -o automake-1.17.tar.xz
+          # 多源 fallback：gnu.org 在部分 Azure 宿主机上会 connect timeout
+          OK=0
+          for base in \
+            "https://ftp.gnu.org/gnu/automake" \
+            "https://mirrors.kernel.org/gnu/automake" \
+            "https://mirror.netcologne.de/gnu/automake" \
+            "https://mirrors.tuna.tsinghua.edu.cn/gnu/automake"; do
+            echo "尝试下载: $base/automake-1.17.tar.xz"
+            if curl -fL --connect-timeout 20 --max-time 120 -o automake-1.17.tar.xz "$base/automake-1.17.tar.xz"; then
+              OK=1; echo "下载成功: $base"; break
+            fi
+            echo "该源失败，切换下一个…"
+          done
+          [ "$OK" = "1" ] || { echo "FATAL: 所有 automake 源均下载失败"; exit 1; }
           rm -rf automake-1.17-src
           mkdir -p automake-1.17-src
           tar -xf automake-1.17.tar.xz -C automake-1.17-src --strip-components=1
