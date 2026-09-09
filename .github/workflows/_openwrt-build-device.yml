@@ -63,11 +63,10 @@ on:
 jobs:
   build:
     name: 编译 ${{ inputs.device }}
-    # 锁定 20260831 镜像：9/8 该版本 step6 仅 5 分钟通过；9/8 09:28 UTC 新镜像
-    # (20260907.292) 上 immortalwrt init + gnu.org 下载均触发 runner lost
-    # communication。回退到验证过的旧版带日期 label。
-    # ubuntu-22.04 于 2026-09-17 起弃用，届时若 label 失效需迁移到 ubuntu-24.04。
-    runs-on: ubuntu-22.04-20260831
+    # 无法按构建号锁定镜像（actions/runner-images#13034 官方拒绝，带日期 label 会导致永久 queued）。
+    # ubuntu-22.04 当前镜像 20260907.292 的 step6 hang / step7 gnu.org 超时已由脚本层 workaround
+    # 规避（strip full-upgrade + automake 多源 fallback）。若仍不稳，plan B 是迁移 ubuntu-24.04。
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@main
