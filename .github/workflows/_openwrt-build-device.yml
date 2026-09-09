@@ -144,6 +144,20 @@ jobs:
           echo "Disk after cleanup:"
           df -hT
 
+      - name: Tune block device readahead (runner-loss mitigation)
+        shell: bash
+        run: |
+          # actions/runner-images#13770：新内核默认 read_ahead_kb 由 128 提到 4096，
+          # 重 I/O（apt 装包 / 编译 / 下载）时打满 page cache → I/O 抖动 → hosted
+          # runner lost communication。官方 udev 修复(#13938)只 pin SCSI(sd*)，
+          # Azure v5/v6 宿主机的 NVMe(nvme*) 漏网。这里对所有块设备统一 pin 128。
+          # 运行时 sysfs 参数，免重启、job 结束 VM 即销毁，无持久副作用。
+          echo "== read_ahead_kb 调整前 =="
+          for f in /sys/block/*/queue/read_ahead_kb; do printf '%s = %s\n' "$f" "$(cat "$f" 2>/dev/null)"; done
+          for f in /sys/block/*/queue/read_ahead_kb; do echo 128 | sudo tee "$f" >/dev/null 2>&1 || true; done
+          echo "== read_ahead_kb 调整后 =="
+          for f in /sys/block/*/queue/read_ahead_kb; do printf '%s = %s\n' "$f" "$(cat "$f" 2>/dev/null)"; done
+
       - name: Initialize build environment
         shell: bash
         timeout-minutes: 15
