@@ -38,9 +38,11 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
         set_default_ip "192.168.100.1" "JDC-AX6600"
     fi
 
-    # 更新Golang版本（当前已停用，保留注释便于回滚）
-    # rm -rf feeds/packages/lang/golang && echo "删除golang"
-    # git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+    # 更新Golang版本：libwrt 25.12.5 自带 go 1.26.4，而 xray-core v26.9.x 的 go.mod
+    # 要求 go >= 1.27（GOTOOLCHAIN=local 不允许自动下载工具链），启用 sbwml golang
+    # feed 替换，27.x 分支 = Go 1.27.1（openwrt master 同代版本）
+    rm -rf feeds/packages/lang/golang && echo "删除golang"
+    git clone https://github.com/sbwml/packages_lang_golang -b 27.x feeds/packages/lang/golang
 
     wget https://raw.githubusercontent.com/m0eak/openwrt_patch/refs/heads/main/gl-axt1800/9999-gl-axt1800-dts-change-cooling-level.patch && echo "下载成功" || echo "下载失败"
     mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.12/9999-gl-axt1800-dts-change-cooling-level.patch && echo "移动成功" || echo "移动失败"
