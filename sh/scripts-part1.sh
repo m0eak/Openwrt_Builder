@@ -38,9 +38,54 @@ if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; the
         set_default_ip "192.168.100.1" "JDC-AX6600"
     fi
 
-    # 更新Golang版本（当前已停用，保留注释便于回滚）
-    # rm -rf feeds/packages/lang/golang && echo "删除golang"
-    # git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
+    # 更新Golang版本：libwrt 25.12.5 自带 go 1.26.4，而 xray-core v26.9.x 的 go.mod
+    # 要求 go >= 1.27（GOTOOLCHAIN=local 不允许自动下载工具链），启用 sbwml golang
+    # feed 替换，27.x 分支 = Go 1.27.1（openwrt master 同代版本）
+    GOLANG_FEED_REPO="https://github.com/sbwml/packages_lang_golang"
+    GOLANG_FEED_BRANCH="27.x"
+    GOLANG_FEED_DIR="feeds/packages/lang/golang"
+    MIN_GO_MAJOR=1
+    MIN_GO_MINOR=27
+
+    rm -rf "$GOLANG_FEED_DIR" || { echo "错误: 删除 $GOLANG_FEED_DIR 失败"; exit 1; }
+    echo "删除golang"
+
+    git clone --depth 1 -b "$GOLANG_FEED_BRANCH" "$GOLANG_FEED_REPO" "$GOLANG_FEED_DIR" \
+        || { echo "错误: 克隆 golang feed 失败 (repo=$GOLANG_FEED_REPO branch=$GOLANG_FEED_BRANCH)"; exit 1; }
+    echo "golang feed 克隆完成: $GOLANG_FEED_BRANCH"
+
+    # 校验 feed 声明的 Go 版本：Makefile 可能位于 golang/Makefile（sbwml 27.x 实际布局），
+    # 也可能直接位于 feed 根目录，两种布局都兼容。
+    GOLANG_MAKEFILE=""
+    for candidate in "$GOLANG_FEED_DIR/golang/Makefile" "$GOLANG_FEED_DIR/Makefile"; do
+        if [[ -f "$candidate" ]]; then
+            GOLANG_MAKEFILE="$candidate"
+            break
+        fi
+    done
+    if [[ -z "$GOLANG_MAKEFILE" ]]; then
+        echo "错误: 在 $GOLANG_FEED_DIR 中找不到 golang Makefile (已检查 golang/Makefile 与 Makefile)"
+        ls -l "$GOLANG_FEED_DIR" 2>/dev/null
+        exit 1
+    fi
+
+    GO_MAJOR_MINOR=$(sed -n 's/^[[:space:]]*GO_VERSION_MAJOR_MINOR[[:space:]]*:=[[:space:]]*\([0-9]\+\.[0-9]\+\).*/\1/p' "$GOLANG_MAKEFILE" | head -n 1)
+    GO_PATCH=$(sed -n 's/^[[:space:]]*GO_VERSION_PATCH[[:space:]]*:=[[:space:]]*\([0-9]\+\).*/\1/p' "$GOLANG_MAKEFILE" | head -n 1)
+
+    if [[ -z "$GO_MAJOR_MINOR" ]]; then
+        echo "错误: 无法从 $GOLANG_MAKEFILE 提取 GO_VERSION_MAJOR_MINOR"
+        exit 1
+    fi
+    GO_MAJOR=${GO_MAJOR_MINOR%.*}
+    GO_MINOR=${GO_MAJOR_MINOR#*.}
+    GO_PATCH=${GO_PATCH:-0}
+
+    if (( GO_MAJOR > MIN_GO_MAJOR )) || (( GO_MAJOR == MIN_GO_MAJOR && GO_MINOR >= MIN_GO_MINOR )); then
+        echo "golang feed 版本校验通过: ${GO_MAJOR}.${GO_MINOR}.${GO_PATCH} (>= ${MIN_GO_MAJOR}.${MIN_GO_MINOR}) [Makefile: $GOLANG_MAKEFILE]"
+    else
+        echo "错误: golang feed 版本 ${GO_MAJOR}.${GO_MINOR}.${GO_PATCH} 低于要求 ${MIN_GO_MAJOR}.${MIN_GO_MINOR} (xray-core 需要 go >= 1.27)"
+        exit 1
+    fi
 
     wget https://raw.githubusercontent.com/m0eak/openwrt_patch/refs/heads/main/gl-axt1800/9999-gl-axt1800-dts-change-cooling-level.patch && echo "下载成功" || echo "下载失败"
     mv 9999-gl-axt1800-dts-change-cooling-level.patch ./target/linux/qualcommax/patches-6.12/9999-gl-axt1800-dts-change-cooling-level.patch && echo "移动成功" || echo "移动失败"
