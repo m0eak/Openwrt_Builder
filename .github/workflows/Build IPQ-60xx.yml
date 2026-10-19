@@ -13,11 +13,11 @@ on:
       tag:
         description: 'libwrt 版本'
         required: false
-        default: '25.12.5'
+        default: '25.12.6'
 
 env:
   REPO_URL_IMM: https://github.com/m0eak/libwrt.git
-  REPO_BRANCH: 25.12.5
+  REPO_BRANCH: 25.12.6
 
 jobs:
   build:
