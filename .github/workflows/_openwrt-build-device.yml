@@ -53,12 +53,12 @@ on:
         type: string
       install_automake_117:
         description: Install local Automake 1.17 before cloning source.
-        default: "false"
-        type: string
+        default: false
+        type: boolean
       sonic_fullcone:
         description: Apply Sonic Fullcone patch after feeds install.
-        default: "false"
-        type: string
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -190,7 +190,7 @@ jobs:
           echo "TAG=${{ inputs.repo_branch }}" >> "$GITHUB_ENV"
 
       - name: Install local Automake 1.17
-        if: ${{ inputs.install_automake_117 == 'true' }}
+        if: ${{ inputs.install_automake_117 }}
         shell: bash
         run: |
           set -e
@@ -259,7 +259,7 @@ jobs:
         run: cd openwrt && ./scripts/feeds install -a
 
       - name: Apply Sonic Fullcone patch
-        if: ${{ inputs.sonic_fullcone == 'true' }}
+        if: ${{ inputs.sonic_fullcone }}
         shell: bash
         run: |
           cd openwrt
