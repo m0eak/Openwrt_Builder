@@ -287,12 +287,57 @@ jobs:
           ./scripts/diffconfig.sh
           echo "::endgroup::"
 
+      - name: Fingerprint shared cache inputs
+        id: cache-input
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd openwrt
+
+          fingerprint=$(
+            {
+              printf 'config=%s\n' "$(sha256sum .config | cut -d ' ' -f1)"
+              printf 'feeds-conf=%s\n' "$(sha256sum feeds.conf.default | cut -d ' ' -f1)"
+
+              for feed_dir in feeds/*; do
+                [ -d "$feed_dir" ] || continue
+                feed_root=$(git -C "$feed_dir" rev-parse --show-toplevel 2>/dev/null) || continue
+                feed_path=$(cd "$feed_dir" && pwd -P)
+                [ "$feed_root" = "$feed_path" ] || continue
+                commit=$(git -C "$feed_dir" rev-parse --verify HEAD)
+                printf 'feed:%s=%s\n' "${feed_dir#feeds/}" "$commit"
+              done
+
+              golang_feed=feeds/packages/lang/golang
+              if [ -d "$golang_feed" ]; then
+                golang_root=$(git -C "$golang_feed" rev-parse --show-toplevel 2>/dev/null || true)
+                golang_path=$(cd "$golang_feed" && pwd -P)
+                if [ "$golang_root" = "$golang_path" ]; then
+                  commit=$(git -C "$golang_feed" rev-parse --verify HEAD)
+                  printf 'golang-feed=%s\n' "$commit"
+                fi
+              fi
+
+              for custom_dir in package/custom/*; do
+                [ -d "$custom_dir" ] || continue
+                custom_root=$(git -C "$custom_dir" rev-parse --show-toplevel 2>/dev/null) || continue
+                custom_path=$(cd "$custom_dir" && pwd -P)
+                [ "$custom_root" = "$custom_path" ] || continue
+                commit=$(git -C "$custom_dir" rev-parse --verify HEAD)
+                printf 'custom:%s=%s\n' "${custom_dir#package/custom/}" "$commit"
+              done
+            } | LC_ALL=C sort | sha256sum | cut -d ' ' -f1
+          )
+
+          echo "fingerprint=$fingerprint" >> "$GITHUB_OUTPUT"
+          echo "Shared cache input fingerprint: $fingerprint"
+
       - name: Cache toolchain
         uses: HiGarfield/cachewrtbuild@main
         if: ${{ inputs.cache_toolchain != 'false' }}
         with:
           ccache: true
-          mixkey: ${{ github.workflow }}-${{ inputs.workflow_name }}-${{ hashFiles(inputs.config_file, '**/scripts-part*.sh') }}
+          mixkey: ${{ github.workflow }}-${{ inputs.workflow_name }}-${{ hashFiles(inputs.config_file, '**/scripts-part*.sh') }}-${{ steps.cache-input.outputs.fingerprint }}
           prefix: ${{ steps.clone-source.outputs.openwrt-path }}
 
       - name: Download packages
