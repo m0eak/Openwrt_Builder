@@ -30,3 +30,6 @@ graft/
 .claude/
 .mcp.json
 opencode.json
+
+# Local implementation plans
+/docs/superpowers/plans/
