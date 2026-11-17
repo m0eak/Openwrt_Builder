@@ -285,6 +285,36 @@ class SplitOutputsTests(unittest.TestCase):
                     self.assertEqual(hashlib.sha256((directory / name).read_bytes()).hexdigest(), digest)
                 self.assertEqual(set(sums), {p.name for p in directory.iterdir()} - {"sha256sums"})
 
+    def test_release_metadata_renaming_keeps_checksums_valid(self):
+        if yaml is None:
+            self.skipTest("pyyaml not available")
+        action = yaml.safe_load(
+            (ROOT / ".github/actions/openwrt-publish-release/action.yml").read_text())
+        script = next(step["run"] for step in action["runs"]["steps"]
+                      if step.get("name") == "Prefix generic firmware metadata files")
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            src = root / "src"
+            self._make_source(src)
+            out = root / "all-artifacts"
+            h.split_outputs(src, out, list(h.DEVICE_SPECS))
+            # Native checksums may use text mode, while shared outputs use binary mode.
+            jdc_sums = out / "firmware-JDC-AX6600/sha256sums"
+            jdc_sums.write_text(jdc_sums.read_text().replace(" *", "  "))
+            result = subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script],
+                                    cwd=root, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            for device in h.DEVICE_SPECS:
+                directory = out / ("firmware-" + device)
+                sums = directory / (device + "-sha256sums")
+                check = subprocess.run(["sha256sum", "--check", sums.name],
+                                       cwd=directory, capture_output=True, text=True)
+                self.assertEqual(check.returncode, 0, check.stdout + check.stderr)
+                for name in ("version.buildinfo", "profiles.json", "config.buildinfo", "feeds.buildinfo"):
+                    self.assertTrue((directory / (device + "-" + name)).is_file())
+                self.assertTrue(list(directory.glob("openwrt-*.manifest")))
+                self.assertTrue(list(directory.glob("openwrt-*.bin")))
+
     def test_split_missing_profile(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -518,22 +548,26 @@ class WorkflowStructureTests(unittest.TestCase):
 
     def test_dispatch_to_workflow_call_boolean_flow(self):
         root = ROOT / ".github" / "workflows"
-        shared = root / "Build IPQ-60xx Shared.yml"
+        shared = root / "Build IPQ-60xx.yml"
         reusable = root / "_openwrt-build-device.yml"
-        if not shared.is_file() or not reusable.is_file():
-            self.skipTest("workflow files missing")
+        self.assertTrue(shared.is_file())
+        self.assertTrue(reusable.is_file())
+        self.assertFalse((root / "Build IPQ-60xx Shared.yml").exists())
         if yaml is None:
             self.skipTest("pyyaml not available")
         d = yaml.safe_load(shared.read_text())
-        raw = shared.read_text()
-        self.assertIn("workflow_dispatch", raw)
+        events = d.get("on", d.get(True, {}))
+        self.assertTrue({"workflow_dispatch", "repository_dispatch", "schedule"} <= set(events))
         jobs = d.get("jobs", {})
-        self.assertIn("shared-build", jobs)
-        with_inputs = jobs["shared-build"].get("with", {})
+        self.assertEqual(set(jobs), {"build", "publish_release"})
+        self.assertNotIn("strategy", jobs["build"])
+        self.assertEqual(jobs["build"]["uses"], "./.github/workflows/_openwrt-build-device.yml")
+        with_inputs = jobs["build"].get("with", {})
+        self.assertEqual(with_inputs["workflow_name"], "IPQ60xx-Shared")
         self.assertEqual(with_inputs.get("shared_build"), True)
-        self.assertEqual(with_inputs.get("shared_docker"), "${{ inputs.docker == 'true' }}")
-        self.assertNotIn("REPO_URL_IMM", d.get("env", {}))
+        self.assertEqual(with_inputs.get("shared_docker"), "${{ github.event.inputs.docker == 'true' }}")
         self.assertNotIn("${{ env.", with_inputs.get("repo_url", ""))
+        self.assertEqual(jobs["publish_release"]["needs"], "build")
 
         r = yaml.safe_load(reusable.read_text())
         steps = r["jobs"]["build"]["steps"]

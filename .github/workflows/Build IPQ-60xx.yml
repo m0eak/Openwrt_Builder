@@ -21,25 +21,16 @@ env:
 
 jobs:
   build:
-    name: 编译 ${{ matrix.device }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - device: AXT-1800
-            config_file: ./config/axt1800.config
-            workflow_name: AXT-1800
-          - device: JDC-AX6600
-            config_file: ./config/jdcax6600.config
-            workflow_name: JDC-AX6600
+    name: 共享编译 AXT-1800 / JDC-AX6600
     uses: ./.github/workflows/_openwrt-build-device.yml
     with:
-      device: ${{ matrix.device }}
-      config_file: ${{ matrix.config_file }}
-      workflow_name: ${{ matrix.workflow_name }}
+      device: IPQ60xx
+      config_file: ./config/axt1800.config
+      workflow_name: IPQ60xx-Shared
       repo_url: https://github.com/m0eak/libwrt.git
       repo_branch: ${{ github.event.inputs.tag || '25.12.6' }}
-      extra_config_file: ${{ github.event.inputs.docker == 'true' && './config/docker-ipq.config' || '' }}
+      shared_build: true
+      shared_docker: ${{ github.event.inputs.docker == 'true' }}
 
   publish_release:
     name: 合并并发布固件

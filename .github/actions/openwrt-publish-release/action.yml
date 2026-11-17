@@ -54,7 +54,26 @@ runs:
             fi
           done
           if [ -f "${DEVICE_NAME}-sha256sums" ]; then
-            sed -i "s/ \*/ ${DEVICE_NAME}-/" "${DEVICE_NAME}-sha256sums"
+            python3 - "$DEVICE_NAME" <<'PY'
+        import sys
+        from pathlib import Path
+
+        device = sys.argv[1]
+        checksums = Path(f"{device}-sha256sums")
+        renamed = {
+            name: f"{device}-{name}"
+            for name in ("version.buildinfo", "profiles.json", "config.buildinfo", "feeds.buildinfo")
+        }
+        lines = []
+        for line in checksums.read_text().splitlines():
+            if not line.strip():
+                continue
+            digest, name = line.split(maxsplit=1)
+            if name.startswith("*"):
+                name = name[1:]
+            lines.append(f"{digest} *{renamed.get(name, name)}\n")
+        checksums.write_text("".join(lines))
+        PY
           fi
           cd ../..
         done

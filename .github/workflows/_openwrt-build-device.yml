@@ -60,7 +60,7 @@ on:
         default: false
         type: boolean
       shared_build:
-        description: Shared multi-profile IPQ trial build (opt-in).
+        description: Build IPQ profiles together with separate device root filesystems.
         default: false
         type: boolean
       shared_docker:
