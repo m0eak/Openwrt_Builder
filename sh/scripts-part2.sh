@@ -27,6 +27,7 @@ declare -A REPOS=(
     ["https://github.com/vernesong/OpenClash.git"]=""
     ["https://github.com/eamonxg/luci-theme-aurora"]=""
     ["https://github.com/eamonxg/luci-theme-shadcn.git"]=""
+    ["https://github.com/anothaDev/luci-theme-vantage"]=""
     ["https://github.com/eamonxg/luci-app-aurora-config"]=""
     ["https://github.com/NONGFAH/luci-app-athena-led.git"]=""
     ["https://github.com/Tokisaki-Galaxy/luci-app-tailscale-community.git"]=""
@@ -182,6 +183,26 @@ flatten_feed_layout_repos() {
     echo "已展开: package/custom/vlmcsd + package/custom/luci-app-vlmcsd"
 }
 
+flatten_vantage_repo() {
+    # 将 Vantage 双包仓库展开为两个可被 OpenWrt 发现的包目录。
+    local src="$TARGET_DIR/luci-theme-vantage"
+    local theme_tmp="$TARGET_DIR/.luci-theme-vantage.pkg"
+
+    if [ ! -d "$src/luci-theme-vantage" ]; then
+        return 0
+    fi
+
+    echo "展开双包仓库: luci-theme-vantage"
+    rm -rf "$theme_tmp" || return 1
+    mv "$src/luci-theme-vantage" "$theme_tmp" || return 1
+    if [ -d "$src/luci-app-vantage" ]; then
+        mv "$src/luci-app-vantage" "$TARGET_DIR/luci-app-vantage" || return 1
+    fi
+    rm -rf "$src" || return 1
+    mv "$theme_tmp" "$TARGET_DIR/luci-theme-vantage" || return 1
+    echo "已展开: package/custom/luci-theme-vantage + package/custom/luci-app-vantage"
+}
+
 resolve_smartdns_duplicates() {
     # 只保留 passwall-packages 的 OpenWrt 集成布局：独立 pymumu/smartdns
     # 仓库的 package/openwrt/Makefile 含相对 rust include，且会造成重复定义。
@@ -317,6 +338,7 @@ main() {
     remove_conflicting_makefiles || { echo "错误: 冲突 Makefile 清理失败" >&2; return 1; }
     clone_custom_repos || { echo "错误: 自定义仓库克隆失败" >&2; return 1; }
     flatten_feed_layout_repos || { echo "错误: feed 布局展开失败" >&2; return 1; }
+    flatten_vantage_repo || { echo "错误: Vantage 布局展开失败" >&2; return 1; }
     verify_turboacc_makefile || { echo "错误: turboacc Makefile 校验失败" >&2; return 1; }
     verify_single_source_state || { echo "错误: 单一来源状态校验失败" >&2; return 1; }
 }
