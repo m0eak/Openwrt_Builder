@@ -59,6 +59,14 @@ on:
         description: Apply Sonic Fullcone patch after feeds install.
         default: false
         type: boolean
+      shared_build:
+        description: Shared multi-profile IPQ trial build (opt-in).
+        default: false
+        type: boolean
+      shared_docker:
+        description: Append docker config in shared mode.
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -88,6 +96,8 @@ jobs:
           echo "cache_toolchain=${{ inputs.cache_toolchain }}"
           echo "install_automake_117=${{ inputs.install_automake_117 }}"
           echo "sonic_fullcone=${{ inputs.sonic_fullcone }}"
+          echo "shared_build=${{ inputs.shared_build }}"
+          echo "shared_docker=${{ inputs.shared_docker }}"
           for path in \
             "${{ inputs.config_file }}" \
             "${{ inputs.extra_config_file }}" \
@@ -270,22 +280,83 @@ jobs:
         run: |
           [ -e "$GITHUB_WORKSPACE/${{ inputs.default_setting }}" ] && mv "$GITHUB_WORKSPACE/${{ inputs.default_setting }}" openwrt/package/default-settings-m0eak
           [ -d "$GITHUB_WORKSPACE/files" ] && mv "$GITHUB_WORKSPACE/files" openwrt/files
-          [ -e "${{ inputs.config_file }}" ] && mv "${{ inputs.config_file }}" openwrt/.config
-          if [ -n "${{ inputs.extra_config_file }}" ] && [ -e "${{ inputs.extra_config_file }}" ]; then
-            cat "${{ inputs.extra_config_file }}" >> openwrt/.config
+          if ${{ inputs.shared_build }}; then
+            cd openwrt
+            chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
+            "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
+            cp "$GITHUB_WORKSPACE/config/axt1800.config" .config
+            echo "::group::Refresh package metadata"
+            make prepare-tmpinfo
+            echo "::endgroup::"
+            DOCKER_ARGS=()
+            if ${{ inputs.shared_docker }}; then
+              DOCKER_ARGS=(--docker)
+            fi
+            mkdir -p .ipq-shared-baselines
+            for pair in "AXT-1800:axt1800.config" "JDC-AX6600:jdcax6600.config"; do
+              device="${pair%%:*}"
+              cp "$GITHUB_WORKSPACE/config/${pair#*:}" .config
+              if ${{ inputs.shared_docker }}; then
+                cat "$GITHUB_WORKSPACE/config/docker-ipq.config" >> .config
+              fi
+              make defconfig 2>&1 | tee ".ipq-shared-baselines/$device.log"
+              if grep -Eq 'error:|recursive dependency' ".ipq-shared-baselines/$device.log"; then
+                echo "Invalid single-device configuration: $device" >&2
+                exit 1
+              fi
+              cp .config ".ipq-shared-baselines/$device.config"
+            done
+            python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" \
+              generate \
+              --project-root "$GITHUB_WORKSPACE" \
+              --source-root "$PWD" \
+              --device AXT-1800 --device JDC-AX6600 \
+              "${DOCKER_ARGS[@]}" \
+              --baseline-dir .ipq-shared-baselines \
+              --out .config
+          else
+            [ -e "${{ inputs.config_file }}" ] && mv "${{ inputs.config_file }}" openwrt/.config
+            if [ -n "${{ inputs.extra_config_file }}" ] && [ -e "${{ inputs.extra_config_file }}" ]; then
+              cat "${{ inputs.extra_config_file }}" >> openwrt/.config
+            fi
+            cd openwrt
+            chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
+            "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
           fi
-          cd openwrt
           echo "::group::Pre-defconfig workspace snapshot"
           pwd
           ls -ld package/default-settings-m0eak files .config 2>/dev/null || true
           grep -E '^(CONFIG_TARGET|CONFIG_PACKAGE_(docker|dockerd|luci-app-dockerman|containerd|runc))' .config || true
           echo "::endgroup::"
-          chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
-          "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
-          make defconfig
+          if ${{ inputs.shared_build }}; then
+            make defconfig 2>&1 | tee .ipq-shared-baselines/shared.log
+            if grep -Eq 'error:|recursive dependency' .ipq-shared-baselines/shared.log; then
+              echo "Invalid shared configuration" >&2
+              exit 1
+            fi
+          else
+            make defconfig
+          fi
           echo "::group::Current diffconfig"
           ./scripts/diffconfig.sh
           echo "::endgroup::"
+
+      - name: Audit shared normalized package intent
+        if: ${{ inputs.shared_build }}
+        shell: bash
+        run: |
+          cd openwrt
+          DOCKER_ARGS=()
+          if ${{ inputs.shared_docker }}; then DOCKER_ARGS=(--docker); fi
+          python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" audit-normalized \
+            --project-root "$GITHUB_WORKSPACE" \
+            --source-root "$PWD" \
+            --normalized-config .config \
+            --baseline-dir .ipq-shared-baselines \
+            --device AXT-1800 --device JDC-AX6600 \
+            "${DOCKER_ARGS[@]}"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" patch-manifests \
+            --source-root "$PWD"
 
       - name: Fingerprint shared cache inputs
         id: cache-input
@@ -371,6 +442,14 @@ jobs:
         run: |
           cd openwrt/bin/targets/*/*
           rm -rf packages
+          if ${{ inputs.shared_build }}; then
+            OUT="$GITHUB_WORKSPACE/all-artifacts"
+            rm -rf "$OUT"
+            python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" split-outputs \
+              --source-dir "$PWD" \
+              --destination "$OUT" \
+              --device AXT-1800 --device JDC-AX6600
+          fi
           echo "::group::Firmware files"
           pwd
           find . -maxdepth 1 -type f -printf '%f %s bytes\n' | sort
@@ -378,7 +457,28 @@ jobs:
           echo "FIRMWARE_PATH=$PWD" >> "$GITHUB_ENV"
           echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
 
+      - name: Extract per-device package lists (shared)
+        if: ${{ inputs.shared_build }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/all-artifacts"
+          for pair in \
+            "AXT-1800:firmware-AXT-1800" \
+            "JDC-AX6600:firmware-JDC-AX6600"; do
+            device="${pair%%:*}"
+            dir="$OUT/${pair##*:}"
+            mkdir -p "$OUT/package-list-$device"
+            # Require exactly one per-device manifest and reuse it for the list.
+            manifest=$(find "$dir" -maxdepth 1 -name '*.manifest' -print -quit)
+            [ -n "$manifest" ] || { echo "missing manifest for $device" >&2; exit 1; }
+            python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
+              --manifest "$manifest" \
+              --out "$OUT/package-list-$device/packages.txt"
+          done
+
       - name: Extract LuCI package list from final build config
+        if: ${{ !inputs.shared_build }}
         shell: bash
         run: |
           CONFIG_BUILDINFO="${{ steps.organize.outputs.firmware-path }}/config.buildinfo"
@@ -404,12 +504,42 @@ jobs:
 
       - name: Upload package list artifact
         uses: actions/upload-artifact@main
+        if: ${{ !inputs.shared_build }}
         with:
           name: package-list-${{ inputs.device }}
           path: ${{ github.workspace }}/packages.txt
 
+      - name: Upload AXT package list artifact (shared)
+        if: ${{ inputs.shared_build }}
+        uses: actions/upload-artifact@main
+        with:
+          name: package-list-AXT-1800
+          path: ${{ github.workspace }}/all-artifacts/package-list-AXT-1800/*
+
+      - name: Upload JDC package list artifact (shared)
+        if: ${{ inputs.shared_build }}
+        uses: actions/upload-artifact@main
+        with:
+          name: package-list-JDC-AX6600
+          path: ${{ github.workspace }}/all-artifacts/package-list-JDC-AX6600/*
+
       - name: Upload firmware artifact
+        if: ${{ !inputs.shared_build }}
         uses: actions/upload-artifact@main
         with:
           name: firmware-${{ inputs.device }}
           path: ${{ steps.organize.outputs.firmware-path }}
+
+      - name: Upload AXT firmware artifact (shared)
+        if: ${{ inputs.shared_build }}
+        uses: actions/upload-artifact@main
+        with:
+          name: firmware-AXT-1800
+          path: ${{ github.workspace }}/all-artifacts/firmware-AXT-1800
+
+      - name: Upload JDC firmware artifact (shared)
+        if: ${{ inputs.shared_build }}
+        uses: actions/upload-artifact@main
+        with:
+          name: firmware-JDC-AX6600
+          path: ${{ github.workspace }}/all-artifacts/firmware-JDC-AX6600

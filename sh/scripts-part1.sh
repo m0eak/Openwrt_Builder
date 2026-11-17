@@ -25,17 +25,68 @@ set_default_ip() {
     echo "$label IP 修改为 $ip"
 }
 
+set_board_aware_lan_ip() {
+    local cfg=package/base-files/files/bin/config_generate
+    python3 - "$cfg" <<'PY'
+import os
+import stat
+import sys
+import tempfile
+from pathlib import Path
+
+path = Path(sys.argv[1])
+anchor = 'lan) ipad=${ipaddr:-"192.168.1.1"} ;;'
+replacement = 'lan) ipad=${ipaddr:-"$(ipq60xx_board_lan_ip)"} ;;'
+function_anchor = "generate_network() {\n"
+helper = '''ipq60xx_board_lan_ip() {
+	case "$(cat /tmp/sysinfo/board_name 2>/dev/null)" in
+		glinet,gl-axt1800) echo "192.168.8.1";;
+		jdcloud,re-cs-02) echo "192.168.100.1";;
+		*) echo "192.168.1.1";;
+	esac
+}
+
+'''
+try:
+    text = path.read_text()
+    if "ipq60xx_board_lan_ip" in text:
+        if text.count(helper) != 1 or text.count(replacement) != 1 or anchor in text:
+            raise ValueError("已有 board-aware 补丁不完整或发生漂移")
+    else:
+        if text.count(anchor) != 1 or text.count(function_anchor) != 1:
+            raise ValueError("config_generate 默认 IP 或函数锚点缺失/漂移")
+        updated = text.replace(function_anchor, helper + function_anchor).replace(anchor, replacement)
+        fd, temporary = tempfile.mkstemp(prefix=".config_generate.", dir=path.parent)
+        try:
+            with os.fdopen(fd, "w") as output:
+                os.fchmod(output.fileno(), stat.S_IMODE(path.stat().st_mode))
+                output.write(updated)
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+except (OSError, ValueError) as exc:
+    print(f"错误: board-aware 默认 IP 修改失败: {exc}", file=sys.stderr)
+    sys.exit(1)
+PY
+    [ "$?" -eq 0 ] || return 1
+    echo "已启用 AXT-1800/JDC-AX6600 board-aware 默认 IP (config_generate)"
+}
+
 # --- 根据 WORKFLOW_NAME 执行不同的逻辑 ---
 
 # --- 逻辑块 1: 处理 AXT-1800 和 JDC-AX6600 ---
-if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
+if [[ "$WORKFLOW_NAME" == "AXT-1800" || "$WORKFLOW_NAME" == "JDC-AX6600" || "$WORKFLOW_NAME" == "IPQ60xx-Shared" ]]; then
     echo ">>> 检测到设备: $WORKFLOW_NAME。开始执行 libwrt 的特定修改"
 
-    # 修改默认IP
+    # 修改默认IP；共享模式用 board-aware config_generate 默认值，不无条件覆盖
+    # 已有网络配置，也不在启动时重置 IP。
     if [[ "$WORKFLOW_NAME" == "AXT-1800" ]]; then
         set_default_ip "192.168.8.1" "AXT-1800"
     elif [[ "$WORKFLOW_NAME" == "JDC-AX6600" ]]; then
         set_default_ip "192.168.100.1" "JDC-AX6600"
+    elif [[ "$WORKFLOW_NAME" == "IPQ60xx-Shared" ]]; then
+        set_board_aware_lan_ip || exit 1
     fi
 
     # 更新Golang版本：libwrt 25.12.5 自带 go 1.26.4，而 xray-core v26.9.x 的 go.mod
