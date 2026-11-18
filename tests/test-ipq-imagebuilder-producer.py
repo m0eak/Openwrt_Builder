@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -137,6 +138,170 @@ class ProducerBundleTests(unittest.TestCase):
                 for line in (root / "SHA256SUMS").read_text().splitlines()
             }
             self.assertEqual(checksummed, expected)
+
+    def _add_host_tool_symlinks(self, root: Path):
+        bin_dir = root / "imagebuilder/staging_dir/host/bin"
+        os.symlink("/usr/bin/gcc", bin_dir / "gcc")
+        os.symlink("no-such-toolchain", bin_dir / "cc1")
+        (root / "imagebuilder/staging_dir/host/bin/self-contained").write_bytes(
+            b"fixture tool"
+        )
+        os.symlink("self-contained", bin_dir / "zstd-link")
+        host_root = root / "imagebuilder/staging_dir/host"
+        (host_root / "lib").mkdir()
+        (host_root / "lib/libfixture.so").write_bytes(b"fixture library")
+        (host_root / "usr").mkdir()
+        os.symlink("../lib", host_root / "usr/lib")
+        external_dir = root.parent / f"external-host-tools-{root.name}"
+        external_dir.mkdir()
+        os.symlink(external_dir, host_root / "external-dir")
+
+    def test_normalize_host_tools_removes_only_external_or_broken_symlinks(self):
+        with tempfile.TemporaryDirectory() as td:
+            if not hasattr(os, "symlink"):
+                self.skipTest("no symlink support")
+            root = Path(td)
+            self._make_bundle(root)
+            self._add_host_tool_symlinks(root)
+
+            removed = producer.normalize_host_tools(root)
+
+            self.assertEqual(
+                set(removed),
+                {"bin/gcc", "bin/cc1", "external-dir"},
+            )
+            bin_dir = root / "imagebuilder/staging_dir/host/bin"
+            self.assertFalse((bin_dir / "gcc").exists())
+            self.assertFalse((bin_dir / "cc1").exists())
+            self.assertTrue((bin_dir / "mkimage").is_file())
+            self.assertTrue((bin_dir / "self-contained").is_file())
+            self.assertTrue((bin_dir / "zstd-link").is_symlink())
+            self.assertTrue(
+                (root / "imagebuilder/staging_dir/host/usr/lib").is_symlink()
+            )
+            self.assertFalse(
+                (root / "imagebuilder/staging_dir/host/external-dir").exists()
+            )
+
+    def test_seal_validate_accepts_bundle_after_host_tools_normalized(self):
+        with tempfile.TemporaryDirectory() as td:
+            if not hasattr(os, "symlink"):
+                self.skipTest("no symlink support")
+            root = Path(td)
+            source = root / "source"
+            source.mkdir()
+            subprocess.run(["git", "init", "-q", str(source)], check=True)
+            subprocess.run(
+                ["git", "-C", str(source), "config", "user.name", "Fixture"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(source), "config", "user.email", "fixture@example.invalid"],
+                check=True,
+            )
+            (source / "README").write_text("fixture source\n")
+            subprocess.run(["git", "-C", str(source), "add", "README"], check=True)
+            subprocess.run(
+                ["git", "-C", str(source), "commit", "-qm", "fixture source"],
+                check=True,
+            )
+            feed = source / "feeds/packages"
+            feed.mkdir(parents=True)
+            subprocess.run(["git", "init", "-q", str(feed)], check=True)
+            subprocess.run(
+                ["git", "-C", str(feed), "config", "user.name", "Fixture"],
+                check=True,
+            )
+            subprocess.run(
+                ["git", "-C", str(feed), "config", "user.email", "fixture@example.invalid"],
+                check=True,
+            )
+            (feed / "Makefile").write_text("feed fixture\n")
+            subprocess.run(["git", "-C", str(feed), "add", "Makefile"], check=True)
+            subprocess.run(
+                ["git", "-C", str(feed), "commit", "-qm", "fixture feed"],
+                check=True,
+            )
+            custom = source / "package/custom/custom-example"
+            custom.mkdir(parents=True)
+            (custom / "Makefile").write_text("custom fixture\n")
+            bundle = root / "bundle"
+            self._make_bundle(bundle)
+            self._add_host_tool_symlinks(bundle)
+
+            producer.normalize_host_tools(bundle)
+            provenance = producer.collect_provenance(
+                bundle,
+                source,
+                "qualcommax/ipq60xx",
+                "aarch64_cortex-a53",
+                "b" * 40,
+            )
+            producer.write_manifest(bundle, provenance)
+            result = producer.validate_bundle(bundle)
+
+            self.assertGreater(result["apk_count"], 0)
+            self.assertTrue(
+                (bundle / "imagebuilder/staging_dir/host/bin/mkimage").is_file()
+            )
+            self.assertFalse(
+                (bundle / "imagebuilder/staging_dir/host/bin/gcc").exists()
+            )
+            self.assertTrue(
+                (bundle / "imagebuilder/staging_dir/host/usr/lib").is_symlink()
+            )
+
+    def test_validate_accepts_internal_directory_symlink_without_duplicate_hashes(self):
+        with tempfile.TemporaryDirectory() as td:
+            if not hasattr(os, "symlink"):
+                self.skipTest("no symlink support")
+            root = Path(td)
+            self._make_bundle(root)
+            host_root = root / "imagebuilder/staging_dir/host"
+            (host_root / "lib").mkdir()
+            (host_root / "lib/libfixture.so").write_bytes(b"fixture library")
+            (host_root / "usr").mkdir()
+            os.symlink("../lib", host_root / "usr/lib")
+
+            producer.write_manifest(root, PROVENANCE)
+            result = producer.validate_bundle(root)
+
+            self.assertGreater(result["hashed_file_count"], 0)
+            checksums = (root / "SHA256SUMS").read_text(encoding="utf-8")
+            self.assertEqual(checksums.count("staging_dir/host/lib/libfixture.so"), 1)
+            self.assertNotIn("staging_dir/host/usr-lib/libfixture.so", checksums)
+
+    def test_validate_rejects_external_directory_symlink(self):
+        with tempfile.TemporaryDirectory() as td:
+            if not hasattr(os, "symlink"):
+                self.skipTest("no symlink support")
+            root = Path(td)
+            self._make_bundle(root)
+            outside = root.parent / f"outside-host-dir-{root.name}"
+            outside.mkdir()
+            producer.write_manifest(root, PROVENANCE)
+            os.symlink(outside, root / "imagebuilder/staging_dir/host/external-dir")
+
+            with self.assertRaisesRegex(
+                producer.ProducerError, "symlink escapes bundle or is broken"
+            ):
+                producer.validate_bundle(root)
+
+    def test_rejects_directory_symlink_in_bundle(self):
+        with tempfile.TemporaryDirectory() as td:
+            if not hasattr(os, "symlink"):
+                self.skipTest("no symlink support")
+            root = Path(td)
+            self._make_bundle(root)
+            target = root.parent / f"outside-dir-{root.name}"
+            target.mkdir()
+            producer.write_manifest(root, PROVENANCE)
+            os.symlink(target, root / "imagebuilder" / "linked-dir")
+
+            with self.assertRaisesRegex(
+                producer.ProducerError, "symlink escapes bundle or is broken"
+            ):
+                producer.validate_bundle(root)
 
     def test_collects_source_feed_custom_and_kernel_provenance_offline(self):
         with tempfile.TemporaryDirectory() as td:

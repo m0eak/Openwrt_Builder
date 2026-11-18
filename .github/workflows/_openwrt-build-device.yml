@@ -520,6 +520,9 @@ jobs:
           rm -f "$BUNDLE/imagebuilder/keys/local-private-key.pem"
           trap - EXIT
 
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" normalize-host-tools \
+            --bundle-root "$BUNDLE"
+
           ZSTD="$PWD/staging_dir/host/bin/zstd"
           [ -x "$ZSTD" ] || {
             echo "Host zstd tool is missing: $ZSTD" >&2

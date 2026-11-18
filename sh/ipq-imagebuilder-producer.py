@@ -52,11 +52,16 @@ def _bundle_files(root: Path) -> List[Path]:
     for path in root.rglob("*"):
         if path.is_symlink():
             try:
-                path.resolve(strict=True).relative_to(root.resolve())
+                resolved = path.resolve(strict=True)
+                resolved.relative_to(root.resolve())
             except (OSError, ValueError) as exc:
                 raise ProducerError(f"symlink escapes bundle or is broken: {path}") from exc
-            if path.is_dir():
-                raise ProducerError(f"directory symlinks are not supported in bundle: {path}")
+            if resolved.is_dir():
+                continue
+            if not resolved.is_file():
+                raise ProducerError(
+                    f"symlink target is not a regular file or directory: {path}"
+                )
         elif path.is_dir():
             continue
         elif not path.is_file():
@@ -206,6 +211,32 @@ def write_manifest(bundle_root: Path, provenance: Mapping[str, object]) -> None:
             continue
         lines.append(f"{_sha256(path)}  {relative}")
     (root / CHECKSUMS_NAME).write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def normalize_host_tools(bundle_root: Path) -> List[str]:
+    """Drop host staging symlinks that are not self-contained inside the bundle.
+
+    OpenWrt ImageBuilders stage tools and library directories as symlinks either
+    into the build machine's toolchain or to targets that do not exist after the
+    archive is repacked.  These cannot be reproduced by the consumer, so remove
+    them before sealing.  Symlinks that resolve inside the bundle are preserved.
+    """
+    root = bundle_root.resolve()
+    host_root = root / "imagebuilder" / "staging_dir" / "host"
+    if not host_root.is_dir():
+        return []
+    removed: List[str] = []
+    for directory, directory_names, file_names in os.walk(host_root, followlinks=False):
+        paths = [Path(directory) / name for name in (*directory_names, *file_names)]
+        for path in sorted(paths, key=lambda item: item.relative_to(host_root).as_posix()):
+            if not path.is_symlink():
+                continue
+            try:
+                path.resolve(strict=True).relative_to(root)
+            except (OSError, ValueError):
+                removed.append(path.relative_to(host_root).as_posix())
+                path.unlink()
+    return removed
 
 
 def _require_file(root: Path, relative: str) -> Path:
@@ -502,6 +533,11 @@ def _argparse() -> argparse.ArgumentParser:
     seal.add_argument("--builder-revision")
     validate = sub.add_parser("validate", help="validate a sealed producer bundle")
     validate.add_argument("--bundle-root", required=True, type=Path)
+    normalize = sub.add_parser(
+        "normalize-host-tools",
+        help="drop host-tool symlinks that cannot be reproduced by the consumer",
+    )
+    normalize.add_argument("--bundle-root", required=True, type=Path)
     return parser
 
 
@@ -523,6 +559,15 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                         "manifest": str(args.bundle_root / MANIFEST_NAME),
                         "checksums": str(args.bundle_root / CHECKSUMS_NAME),
                     },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+            return 0
+        if args.command == "normalize-host-tools":
+            print(
+                json.dumps(
+                    {"removed": normalize_host_tools(args.bundle_root.resolve())},
                     indent=2,
                     sort_keys=True,
                 )
