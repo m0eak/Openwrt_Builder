@@ -631,6 +631,7 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertIn("'CONFIG_IB_STANDALONE=y'", prepare)
         self.assertIn("'CONFIG_USE_APK=y'", prepare)
         self.assertIn("ipq-imagebuilder-producer.py", stage["run"])
+        self.assertIn('PRIVATE_KEY="$PWD/private-key.pem"', stage["run"])
         self.assertIn("Producer validation requires shared_build=true", prepare)
         self.assertIn("ARCHIVE_LIST=\"$(mktemp", stage["run"])
         self.assertIn(" -tf \"$BUNDLE/imagebuilder.tar.zst\" > \"$ARCHIVE_LIST\"", stage["run"])

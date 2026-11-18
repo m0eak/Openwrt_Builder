@@ -507,9 +507,9 @@ jobs:
           cp "$PROFILES" "$BUNDLE/metadata/profiles.json"
 
           if grep -Fxq 'CONFIG_SIGNATURE_CHECK=y' .config; then
-            PRIVATE_KEY="$PWD/keys/local-private-key.pem"
+            PRIVATE_KEY="$PWD/private-key.pem"
             [ -s "$PRIVATE_KEY" ] || {
-              echo "Signed APK build is missing keys/local-private-key.pem" >&2
+              echo "Signed APK build is missing private-key.pem" >&2
               exit 1
             }
             mkdir -p "$BUNDLE/imagebuilder/keys"
