@@ -522,6 +522,7 @@ class WorkflowStructureTests(unittest.TestCase):
                     "extra_config_file": "config/extra.config",
                     "shared_build": str(shared).lower(),
                     "shared_docker": str(shared).lower(),
+                    "producer_validation": "false",
                 }
                 def render(script):
                     for key, value in inputs.items():
@@ -578,6 +579,70 @@ class WorkflowStructureTests(unittest.TestCase):
         audit_steps = [s for s in steps if "audit" in s.get("name", "").lower()]
         self.assertTrue(audit_steps, "audit step should be present")
         self.assertEqual(audit_steps[0]["if"], "${{ inputs.shared_build }}")
+
+    def test_manual_producer_validation_workflow_is_isolated(self):
+        if yaml is None:
+            self.skipTest("pyyaml not available")
+        workflows = ROOT / ".github/workflows"
+        path = workflows / "Validate IPQ ImageBuilder Producer.yml"
+        self.assertTrue(path.is_file(), "manual producer validation workflow is required")
+        workflow = yaml.safe_load(path.read_text())
+        events = workflow.get("on", workflow.get(True, {}))
+        self.assertEqual(set(events), {"workflow_dispatch"})
+        jobs = workflow.get("jobs", {})
+        self.assertEqual(set(jobs), {"producer"})
+        producer_job = jobs["producer"]
+        self.assertEqual(
+            producer_job["uses"], "./.github/workflows/_openwrt-build-device.yml"
+        )
+        inputs = producer_job["with"]
+        self.assertEqual(inputs["shared_build"], True)
+        self.assertEqual(inputs["producer_validation"], True)
+        self.assertNotIn("publish", str(jobs).lower())
+
+        reusable = yaml.safe_load(
+            (workflows / "_openwrt-build-device.yml").read_text()
+        )
+        reusable_events = reusable.get("on", reusable.get(True, {}))
+        reusable_inputs = reusable_events["workflow_call"]["inputs"]
+        self.assertEqual(reusable_inputs["producer_validation"]["default"], False)
+        steps = reusable["jobs"]["build"]["steps"]
+        names = [step.get("name", "") for step in steps]
+        compile_index = names.index("Compile firmware")
+        produce_index = names.index("Stage and validate IPQ ImageBuilder producer")
+        upload_index = names.index("Upload IPQ ImageBuilder producer artifact")
+        cleanup_index = names.index("Remove temporary build files")
+        self.assertLess(compile_index, produce_index)
+        self.assertLess(produce_index, upload_index)
+        self.assertLess(upload_index, cleanup_index)
+        stage = steps[produce_index]
+        self.assertEqual(stage["if"], "${{ inputs.producer_validation }}")
+        for symbol in ("CONFIG_IB", "CONFIG_IB_STANDALONE", "CONFIG_USE_APK"):
+            self.assertIn(symbol, stage["run"])
+        prepare = next(
+            step["run"]
+            for step in steps
+            if step.get("name") == "Apply custom config and run custom script part 2"
+        )
+        self.assertIn("Producer validation requires shared_build=true", prepare)
+        self.assertIn("'CONFIG_IB=y'", prepare)
+        self.assertIn("'CONFIG_IB_STANDALONE=y'", prepare)
+        self.assertIn("'CONFIG_USE_APK=y'", prepare)
+        self.assertIn("ipq-imagebuilder-producer.py", stage["run"])
+        self.assertIn("Producer validation requires shared_build=true", prepare)
+        self.assertIn("ARCHIVE_LIST=\"$(mktemp", stage["run"])
+        self.assertIn(" -tf \"$BUNDLE/imagebuilder.tar.zst\" > \"$ARCHIVE_LIST\"", stage["run"])
+        self.assertNotIn(
+            'tar -I "$ZSTD -d" -tf "$BUNDLE/imagebuilder.tar.zst" \\\n'
+            '              | grep -Fxq',
+            stage["run"],
+        )
+        upload = steps[upload_index]
+        self.assertEqual(upload["if"], "${{ inputs.producer_validation }}")
+        self.assertEqual(upload["uses"], "actions/upload-artifact@main")
+        for step in steps:
+            if step.get("name", "").startswith("Upload ") and step is not upload:
+                self.assertIn("!inputs.producer_validation", step.get("if", ""))
 
 
 class NormalizedAuditTests(unittest.TestCase):

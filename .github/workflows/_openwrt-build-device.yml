@@ -67,6 +67,10 @@ on:
         description: Append docker config in shared mode.
         default: false
         type: boolean
+      producer_validation:
+        description: Export and validate a standalone shared-build ImageBuilder bundle.
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -98,6 +102,7 @@ jobs:
           echo "sonic_fullcone=${{ inputs.sonic_fullcone }}"
           echo "shared_build=${{ inputs.shared_build }}"
           echo "shared_docker=${{ inputs.shared_docker }}"
+          echo "producer_validation=${{ inputs.producer_validation }}"
           for path in \
             "${{ inputs.config_file }}" \
             "${{ inputs.extra_config_file }}" \
@@ -280,6 +285,10 @@ jobs:
         run: |
           [ -e "$GITHUB_WORKSPACE/${{ inputs.default_setting }}" ] && mv "$GITHUB_WORKSPACE/${{ inputs.default_setting }}" openwrt/package/default-settings-m0eak
           [ -d "$GITHUB_WORKSPACE/files" ] && mv "$GITHUB_WORKSPACE/files" openwrt/files
+          if ${{ inputs.producer_validation }} && ! ${{ inputs.shared_build }}; then
+            echo "Producer validation requires shared_build=true" >&2
+            exit 1
+          fi
           if ${{ inputs.shared_build }}; then
             cd openwrt
             chmod +x "$GITHUB_WORKSPACE/${{ inputs.diy_p2_sh }}"
@@ -329,6 +338,15 @@ jobs:
           grep -E '^(CONFIG_TARGET|CONFIG_PACKAGE_(docker|dockerd|luci-app-dockerman|containerd|runc))' .config || true
           echo "::endgroup::"
           if ${{ inputs.shared_build }}; then
+            if ${{ inputs.producer_validation }}; then
+              for symbol in CONFIG_IB CONFIG_IB_STANDALONE CONFIG_USE_APK; do
+                sed -i -E "/^(# )?${symbol}(=| is not set)/d" .config
+              done
+              printf '%s\n' \
+                'CONFIG_IB=y' \
+                'CONFIG_IB_STANDALONE=y' \
+                'CONFIG_USE_APK=y' >> .config
+            fi
             make defconfig 2>&1 | tee .ipq-shared-baselines/shared.log
             if grep -Eq 'error:|recursive dependency' .ipq-shared-baselines/shared.log; then
               echo "Invalid shared configuration" >&2
@@ -336,6 +354,14 @@ jobs:
             fi
           else
             make defconfig
+          fi
+          if ${{ inputs.producer_validation }}; then
+            for symbol in CONFIG_IB CONFIG_IB_STANDALONE CONFIG_USE_APK; do
+              if ! grep -Fxq "${symbol}=y" .config; then
+                echo "Producer validation requires ${symbol}=y after defconfig" >&2
+                exit 1
+              fi
+            done
           fi
           echo "::group::Current diffconfig"
           ./scripts/diffconfig.sh
@@ -429,6 +455,107 @@ jobs:
           echo "Compiling with $(nproc) threads..."
           make -j"$(expr "$(nproc)" + 1)" || make -j1 V=s
 
+      - name: Stage and validate IPQ ImageBuilder producer
+        if: ${{ inputs.producer_validation }}
+        shell: bash
+        env:
+          BUILDER_REVISION: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          cd openwrt
+
+          TARGET_DIR="bin/targets/qualcommax/ipq60xx"
+          BUNDLE="$GITHUB_WORKSPACE/ipq-imagebuilder-producer"
+          mapfile -d '' IMAGEBUILDERS < <(
+            find "$TARGET_DIR" -maxdepth 1 -type f \
+              -name '*imagebuilder*.tar.zst' -print0
+          )
+          if [ "${#IMAGEBUILDERS[@]}" -ne 1 ]; then
+            printf 'Expected exactly one ImageBuilder archive under %s, found %s\n' \
+              "$TARGET_DIR" "${#IMAGEBUILDERS[@]}" >&2
+            printf '%s\n' "${IMAGEBUILDERS[@]}" >&2
+            exit 1
+          fi
+
+          rm -rf "$BUNDLE"
+          mkdir -p "$BUNDLE/imagebuilder" "$BUNDLE/metadata"
+          cp "${IMAGEBUILDERS[0]}" "$BUNDLE/imagebuilder.tar.zst"
+          tar --zstd -xf "$BUNDLE/imagebuilder.tar.zst" \
+            -C "$BUNDLE/imagebuilder" --strip-components=1
+
+          [ -s "$BUNDLE/imagebuilder/.config" ] || {
+            echo "ImageBuilder archive is missing .config" >&2
+            exit 1
+          }
+          for symbol in CONFIG_IB CONFIG_IB_STANDALONE CONFIG_USE_APK; do
+            if ! grep -Fxq "${symbol}=y" "$BUNDLE/imagebuilder/.config"; then
+              echo "ImageBuilder archive does not preserve ${symbol}=y" >&2
+              exit 1
+            fi
+          done
+
+          PROFILES="$TARGET_DIR/profiles.json"
+          [ -s "$PROFILES" ] || {
+            echo "Build output is missing $PROFILES" >&2
+            exit 1
+          }
+          cp "$PROFILES" "$BUNDLE/imagebuilder/profiles.json"
+          cp "$BUNDLE/imagebuilder/.config" "$BUNDLE/metadata/.config"
+          cp .config "$BUNDLE/metadata/source.config"
+          cp "$BUNDLE/imagebuilder/.targetinfo" "$BUNDLE/metadata/targetinfo"
+          cp "$BUNDLE/imagebuilder/.packageinfo" "$BUNDLE/metadata/packageinfo"
+          cp "$PROFILES" "$BUNDLE/metadata/profiles.json"
+
+          if grep -Fxq 'CONFIG_SIGNATURE_CHECK=y' .config; then
+            PRIVATE_KEY="$PWD/keys/local-private-key.pem"
+            [ -s "$PRIVATE_KEY" ] || {
+              echo "Signed APK build is missing keys/local-private-key.pem" >&2
+              exit 1
+            }
+            mkdir -p "$BUNDLE/imagebuilder/keys"
+            cp "$PRIVATE_KEY" "$BUNDLE/imagebuilder/keys/local-private-key.pem"
+            trap 'rm -f "$BUNDLE/imagebuilder/keys/local-private-key.pem"' EXIT
+          fi
+          make -C "$BUNDLE/imagebuilder" package_index V=s
+          rm -f "$BUNDLE/imagebuilder/keys/local-private-key.pem"
+          trap - EXIT
+
+          ZSTD="$PWD/staging_dir/host/bin/zstd"
+          [ -x "$ZSTD" ] || {
+            echo "Host zstd tool is missing: $ZSTD" >&2
+            exit 1
+          }
+          tar -I "$ZSTD -T0 --ultra -20" \
+            -cf "$BUNDLE/imagebuilder.repacked.tar.zst" \
+            -C "$BUNDLE" imagebuilder
+          mv "$BUNDLE/imagebuilder.repacked.tar.zst" "$BUNDLE/imagebuilder.tar.zst"
+          ARCHIVE_LIST="$(mktemp "$RUNNER_TEMP/ipq-imagebuilder-list.XXXXXX")"
+          tar -I "$ZSTD -d" -tf "$BUNDLE/imagebuilder.tar.zst" > "$ARCHIVE_LIST"
+          if ! grep -Fxq 'imagebuilder/packages/packages.adb' "$ARCHIVE_LIST"; then
+            rm -f "$ARCHIVE_LIST"
+            echo "Repacked ImageBuilder archive is missing its APK repository index" >&2
+            exit 1
+          fi
+          rm -f "$ARCHIVE_LIST"
+
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" seal \
+            --bundle-root "$BUNDLE" \
+            --source-root "$PWD" \
+            --target qualcommax/ipq60xx \
+            --architecture aarch64_cortex-a53 \
+            --builder-revision "$BUILDER_REVISION"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" validate \
+            --bundle-root "$BUNDLE"
+
+      - name: Upload IPQ ImageBuilder producer artifact
+        if: ${{ inputs.producer_validation }}
+        uses: actions/upload-artifact@main
+        with:
+          name: ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ github.workspace }}/ipq-imagebuilder-producer/
+          if-no-files-found: error
+          compression-level: 0
+
       - name: Remove temporary build files
         if: success()
         shell: bash
@@ -438,6 +565,7 @@ jobs:
 
       - name: Organize firmware files
         id: organize
+        if: ${{ !inputs.producer_validation }}
         shell: bash
         run: |
           cd openwrt/bin/targets/*/*
@@ -458,7 +586,7 @@ jobs:
           echo "firmware-path=$PWD" >> "$GITHUB_OUTPUT"
 
       - name: Extract per-device package lists (shared)
-        if: ${{ inputs.shared_build }}
+        if: ${{ inputs.shared_build && !inputs.producer_validation }}
         shell: bash
         run: |
           set -euo pipefail
@@ -504,41 +632,41 @@ jobs:
 
       - name: Upload package list artifact
         uses: actions/upload-artifact@main
-        if: ${{ !inputs.shared_build }}
+        if: ${{ !inputs.shared_build && !inputs.producer_validation }}
         with:
           name: package-list-${{ inputs.device }}
           path: ${{ github.workspace }}/packages.txt
 
       - name: Upload AXT package list artifact (shared)
-        if: ${{ inputs.shared_build }}
+        if: ${{ inputs.shared_build && !inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
           name: package-list-AXT-1800
           path: ${{ github.workspace }}/all-artifacts/package-list-AXT-1800/*
 
       - name: Upload JDC package list artifact (shared)
-        if: ${{ inputs.shared_build }}
+        if: ${{ inputs.shared_build && !inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
           name: package-list-JDC-AX6600
           path: ${{ github.workspace }}/all-artifacts/package-list-JDC-AX6600/*
 
       - name: Upload firmware artifact
-        if: ${{ !inputs.shared_build }}
+        if: ${{ !inputs.shared_build && !inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
           name: firmware-${{ inputs.device }}
           path: ${{ steps.organize.outputs.firmware-path }}
 
       - name: Upload AXT firmware artifact (shared)
-        if: ${{ inputs.shared_build }}
+        if: ${{ inputs.shared_build && !inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
           name: firmware-AXT-1800
           path: ${{ github.workspace }}/all-artifacts/firmware-AXT-1800
 
       - name: Upload JDC firmware artifact (shared)
-        if: ${{ inputs.shared_build }}
+        if: ${{ inputs.shared_build && !inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
           name: firmware-JDC-AX6600

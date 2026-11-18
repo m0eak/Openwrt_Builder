@@ -1,0 +1,29 @@
+name: Validate IPQ ImageBuilder Producer
+
+on:
+  workflow_dispatch:
+    inputs:
+      docker:
+        description: Include Docker in the shared build.
+        required: false
+        default: false
+        type: boolean
+      tag:
+        description: libwrt branch or tag to build.
+        required: false
+        default: 25.12.6
+        type: string
+
+jobs:
+  producer:
+    name: Build and validate the shared IPQ ImageBuilder
+    uses: ./.github/workflows/_openwrt-build-device.yml
+    with:
+      device: IPQ60xx
+      config_file: ./config/axt1800.config
+      workflow_name: IPQ60xx-Producer-Validation
+      repo_url: https://github.com/m0eak/libwrt.git
+      repo_branch: ${{ inputs.tag || '25.12.6' }}
+      shared_build: true
+      shared_docker: ${{ inputs.docker }}
+      producer_validation: true
