@@ -597,6 +597,7 @@ class WorkflowStructureTests(unittest.TestCase):
             producer_job["uses"], "./.github/workflows/_openwrt-build-device.yml"
         )
         inputs = producer_job["with"]
+        self.assertEqual(inputs["workflow_name"], "IPQ60xx-Shared")
         self.assertEqual(inputs["shared_build"], True)
         self.assertEqual(inputs["producer_validation"], True)
         self.assertNotIn("publish", str(jobs).lower())

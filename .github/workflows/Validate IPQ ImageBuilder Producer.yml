@@ -24,7 +24,7 @@ jobs:
     with:
       device: IPQ60xx
       config_file: ./config/axt1800.config
-      workflow_name: IPQ60xx-Producer-Validation
+      workflow_name: IPQ60xx-Shared
       repo_url: https://github.com/m0eak/libwrt.git
       repo_branch: ${{ inputs.tag || '25.12.6' }}
       shared_build: true
