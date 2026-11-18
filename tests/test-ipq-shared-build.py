@@ -588,7 +588,8 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertTrue(path.is_file(), "manual producer validation workflow is required")
         workflow = yaml.safe_load(path.read_text())
         events = workflow.get("on", workflow.get(True, {}))
-        self.assertEqual(set(events), {"workflow_dispatch"})
+        self.assertEqual(set(events), {"push", "workflow_dispatch"})
+        self.assertEqual(events["push"]["branches"], ["feat/ipq-shared-build"])
         jobs = workflow.get("jobs", {})
         self.assertEqual(set(jobs), {"producer"})
         producer_job = jobs["producer"]

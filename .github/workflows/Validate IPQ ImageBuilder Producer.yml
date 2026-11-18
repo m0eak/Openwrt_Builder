@@ -1,6 +1,9 @@
 name: Validate IPQ ImageBuilder Producer
 
 on:
+  push:
+    branches:
+      - feat/ipq-shared-build
   workflow_dispatch:
     inputs:
       docker:
@@ -25,5 +28,5 @@ jobs:
       repo_url: https://github.com/m0eak/libwrt.git
       repo_branch: ${{ inputs.tag || '25.12.6' }}
       shared_build: true
-      shared_docker: ${{ inputs.docker }}
+      shared_docker: ${{ inputs.docker || false }}
       producer_validation: true
