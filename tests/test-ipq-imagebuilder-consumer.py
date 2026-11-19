@@ -45,7 +45,10 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         jobs = self.workflow["jobs"]
         self.assertEqual(set(jobs), {"consumer"})
         consumer = jobs["consumer"]
-        self.assertNotIn("strategy", consumer)
+        self.assertEqual(
+            consumer["strategy"]["matrix"]["profile"],
+            list(PROFILES),
+        )
         self.assertNotIn("publish", str(jobs).lower())
         self.assertNotIn("release", str(jobs).lower())
 
@@ -95,29 +98,28 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         )
 
     def test_both_profiles_run_manifest_then_image(self):
-        steps = self.workflow["jobs"]["consumer"]["steps"]
-        profile_steps = {
-            step["name"]: step["run"]
-            for step in steps
-            if step.get("name", "").startswith("Validate ")
-            and "ImageBuilder consumer" in step.get("name", "")
-        }
-        self.assertEqual(len(profile_steps), 2)
+        job = self.workflow["jobs"]["consumer"]
+        steps = job["steps"]
+        build_step = next(
+            step for step in steps if step.get("name") == "Build and verify ImageBuilder consumer"
+        )
+        run = build_step["run"]
+        self.assertEqual(build_step["env"]["PROFILE"], "${{ matrix.profile }}")
+        self.assertIn('make manifest "PROFILE=$PROFILE"', run)
+        self.assertIn('make image "PROFILE=$PROFILE"', run)
+        self.assertLess(
+            run.index('make manifest "PROFILE=$PROFILE"'),
+            run.index('make image "PROFILE=$PROFILE"'),
+        )
+        self.assertIn("imagebuilder.tar.zst", run)
+        self.assertIn("--strip-components=1", run)
+        self.assertIn('test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"', run)
+        self.assertIn('ipq-imagebuilder-consumer.py" verify', run)
+        self.assertIn('--profile "$PROFILE"', run)
         for profile in PROFILES:
-            matching = [run for name, run in profile_steps.items() if profile in name]
-            self.assertEqual(len(matching), 1)
-            run = matching[0]
-            manifest = f"make manifest PROFILE={profile}"
-            image = f"make image PROFILE={profile}"
-            self.assertIn(manifest, run)
-            self.assertIn(image, run)
-            self.assertLess(run.index(manifest), run.index(image))
-            self.assertIn("imagebuilder.tar.zst", run)
-            self.assertIn("--strip-components=1", run)
-            self.assertIn(
-                'test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"', run
-            )
+            self.assertIn(profile, job["strategy"]["matrix"]["profile"])
 
+        steps_by_name = {step.get("name"): step for step in steps}
         validation = next(
             step["run"]
             for step in steps
@@ -126,23 +128,10 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         self.assertIn("ipq-imagebuilder-producer.py validate", validation)
         self.assertIn("provenance.json", validation)
         self.assertIn("SHA256SUMS", validation)
-        validation_index = next(
-            index
-            for index, step in enumerate(steps)
-            if step.get("name") == "Validate producer bundle and provenance"
+        self.assertLess(
+            list(steps_by_name).index("Validate producer bundle and provenance"),
+            list(steps_by_name).index("Build and verify ImageBuilder consumer"),
         )
-
-        for profile in PROFILES:
-            profile_index = next(
-                index
-                for index, step in enumerate(steps)
-                if step.get("name") == f"Validate {profile} ImageBuilder consumer"
-            )
-            run = steps[profile_index]["run"]
-            self.assertLess(validation_index, profile_index)
-            self.assertIn('ipq-imagebuilder-consumer.py" verify', run)
-            self.assertIn(f"--profile {profile}", run)
-            self.assertIn("--workdir \"$WORKDIR\"", run)
 
         for step in steps:
             if "run" in step:

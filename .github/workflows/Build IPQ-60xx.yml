@@ -20,8 +20,8 @@ env:
   REPO_BRANCH: 25.12.6
 
 jobs:
-  build:
-    name: 共享编译 AXT-1800 / JDC-AX6600
+  producer:
+    name: 共享编译并生成 ImageBuilder
     uses: ./.github/workflows/_openwrt-build-device.yml
     with:
       device: IPQ60xx
@@ -31,10 +31,91 @@ jobs:
       repo_branch: ${{ github.event.inputs.tag || '25.12.6' }}
       shared_build: true
       shared_docker: ${{ github.event.inputs.docker == 'true' }}
+      producer_validation: true
+
+  image:
+    name: 构建 ${{ matrix.device }}
+    needs: producer
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - profile: glinet_gl-axt1800
+            device: AXT-1800
+          - profile: jdcloud_re-cs-02
+            device: JDC-AX6600
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@main
+
+      - name: Download producer ImageBuilder artifact
+        uses: actions/download-artifact@main
+        with:
+          name: ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ipq-imagebuilder-producer
+
+      - name: Validate producer bundle and provenance
+        shell: bash
+        env:
+          BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
+        run: |
+          set -euo pipefail
+          test -s "$BUNDLE/imagebuilder.tar.zst"
+          test -s "$BUNDLE/provenance.json"
+          test -s "$BUNDLE/SHA256SUMS"
+          python3 sh/ipq-imagebuilder-producer.py validate \
+            --bundle-root "$BUNDLE"
+
+      - name: Build and verify device image
+        shell: bash
+        env:
+          BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
+          WORKDIR: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}
+          PROFILE: ${{ matrix.profile }}
+        run: |
+          set -euo pipefail
+          rm -rf "$WORKDIR"
+          mkdir -p "$WORKDIR"
+          tar --zstd -xf "$BUNDLE/imagebuilder.tar.zst" \
+            -C "$WORKDIR" --strip-components=1
+          test -s "$WORKDIR/Makefile"
+          cd "$WORKDIR"
+          make manifest "PROFILE=$PROFILE"
+          make image "PROFILE=$PROFILE"
+          OUTPUT_DIR="$WORKDIR/bin/targets/qualcommax/ipq60xx"
+          test -d "$OUTPUT_DIR"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
+            --workdir "$WORKDIR" \
+            --profile "$PROFILE"
+
+          manifest=$(find "$OUTPUT_DIR" -maxdepth 1 -type f \
+            -name "*-${PROFILE}.manifest" -print -quit)
+          test -n "$manifest"
+          PACKAGE_LIST_DIR="$GITHUB_WORKSPACE/package-list-${{ matrix.device }}"
+          mkdir -p "$PACKAGE_LIST_DIR"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
+            --manifest "$manifest" \
+            --out "$PACKAGE_LIST_DIR/packages.txt"
+          rm -rf "$OUTPUT_DIR/packages"
+
+      - name: Upload device firmware artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: firmware-${{ matrix.device }}
+          path: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}/bin/targets/qualcommax/ipq60xx/*
+          if-no-files-found: error
+
+      - name: Upload device package list artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: package-list-${{ matrix.device }}
+          path: ${{ github.workspace }}/package-list-${{ matrix.device }}/packages.txt
+          if-no-files-found: error
 
   publish_release:
-    name: 合并并发布固件
-    needs: build
+    name: 汇总并发布固件
+    needs: image
     runs-on: ubuntu-22.04
     if: success()
     steps:

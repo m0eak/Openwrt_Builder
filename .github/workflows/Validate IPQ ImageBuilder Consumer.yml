@@ -19,8 +19,14 @@ permissions:
 
 jobs:
   consumer:
-    name: Validate IPQ ImageBuilder consumer profiles
+    name: Validate ${{ matrix.profile }} ImageBuilder consumer
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        profile:
+          - glinet_gl-axt1800
+          - jdcloud_re-cs-02
     steps:
       - name: Checkout validation scripts
         uses: actions/checkout@main
@@ -46,11 +52,12 @@ jobs:
           python3 sh/ipq-imagebuilder-producer.py validate \
             --bundle-root "$BUNDLE"
 
-      - name: Validate glinet_gl-axt1800 ImageBuilder consumer
+      - name: Build and verify ImageBuilder consumer
         shell: bash
         env:
           BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
-          WORKDIR: ${{ runner.temp }}/imagebuilder-glinet_gl-axt1800
+          WORKDIR: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}
+          PROFILE: ${{ matrix.profile }}
         run: |
           set -euo pipefail
           rm -rf "$WORKDIR"
@@ -59,29 +66,9 @@ jobs:
             -C "$WORKDIR" --strip-components=1
           test -s "$WORKDIR/Makefile"
           cd "$WORKDIR"
-          make manifest PROFILE=glinet_gl-axt1800
-          make image PROFILE=glinet_gl-axt1800
+          make manifest "PROFILE=$PROFILE"
+          make image "PROFILE=$PROFILE"
           test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"
           python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
             --workdir "$WORKDIR" \
-            --profile glinet_gl-axt1800
-
-      - name: Validate jdcloud_re-cs-02 ImageBuilder consumer
-        shell: bash
-        env:
-          BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
-          WORKDIR: ${{ runner.temp }}/imagebuilder-jdcloud_re-cs-02
-        run: |
-          set -euo pipefail
-          rm -rf "$WORKDIR"
-          mkdir -p "$WORKDIR"
-          tar --zstd -xf "$BUNDLE/imagebuilder.tar.zst" \
-            -C "$WORKDIR" --strip-components=1
-          test -s "$WORKDIR/Makefile"
-          cd "$WORKDIR"
-          make manifest PROFILE=jdcloud_re-cs-02
-          make image PROFILE=jdcloud_re-cs-02
-          test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"
-          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
-            --workdir "$WORKDIR" \
-            --profile jdcloud_re-cs-02
+            --profile "$PROFILE"

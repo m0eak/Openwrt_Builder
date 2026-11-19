@@ -560,15 +560,53 @@ class WorkflowStructureTests(unittest.TestCase):
         events = d.get("on", d.get(True, {}))
         self.assertTrue({"workflow_dispatch", "repository_dispatch", "schedule"} <= set(events))
         jobs = d.get("jobs", {})
-        self.assertEqual(set(jobs), {"build", "publish_release"})
-        self.assertNotIn("strategy", jobs["build"])
-        self.assertEqual(jobs["build"]["uses"], "./.github/workflows/_openwrt-build-device.yml")
-        with_inputs = jobs["build"].get("with", {})
+        self.assertEqual(set(jobs), {"producer", "image", "publish_release"})
+        self.assertNotIn("strategy", jobs["producer"])
+        self.assertEqual(jobs["producer"]["uses"], "./.github/workflows/_openwrt-build-device.yml")
+        with_inputs = jobs["producer"].get("with", {})
         self.assertEqual(with_inputs["workflow_name"], "IPQ60xx-Shared")
         self.assertEqual(with_inputs.get("shared_build"), True)
         self.assertEqual(with_inputs.get("shared_docker"), "${{ github.event.inputs.docker == 'true' }}")
+        self.assertEqual(with_inputs.get("producer_validation"), True)
         self.assertNotIn("${{ env.", with_inputs.get("repo_url", ""))
-        self.assertEqual(jobs["publish_release"]["needs"], "build")
+        self.assertEqual(jobs["image"]["needs"], "producer")
+        self.assertEqual(
+            jobs["image"]["strategy"]["matrix"]["include"],
+            [
+                {"profile": "glinet_gl-axt1800", "device": "AXT-1800"},
+                {"profile": "jdcloud_re-cs-02", "device": "JDC-AX6600"},
+            ],
+        )
+        image_steps = jobs["image"]["steps"]
+        download = next(
+            step for step in image_steps
+            if step.get("name") == "Download producer ImageBuilder artifact"
+        )
+        self.assertEqual(
+            download["with"]["name"],
+            "ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}",
+        )
+        build_image = next(
+            step for step in image_steps
+            if step.get("name") == "Build and verify device image"
+        )
+        self.assertIn('make manifest "PROFILE=$PROFILE"', build_image["run"])
+        self.assertIn('make image "PROFILE=$PROFILE"', build_image["run"])
+        self.assertIn("ipq-imagebuilder-consumer.py", build_image["run"])
+        upload_names = {
+            step["with"]["name"]
+            for step in image_steps
+            if step.get("uses") == "actions/upload-artifact@main"
+        }
+        self.assertEqual(
+            upload_names,
+            {"firmware-${{ matrix.device }}", "package-list-${{ matrix.device }}"},
+        )
+        self.assertEqual(jobs["publish_release"]["needs"], "image")
+        self.assertEqual(
+            jobs["publish_release"]["steps"][-1]["uses"],
+            "./.github/actions/openwrt-publish-release",
+        )
 
         r = yaml.safe_load(reusable.read_text())
         steps = r["jobs"]["build"]["steps"]
