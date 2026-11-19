@@ -89,6 +89,7 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
             upload_steps[0]["with"]["name"],
             "ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}",
         )
+        self.assertEqual(upload_steps[0]["with"]["include-hidden-files"], True)
         self.assertEqual(
             producer["jobs"]["producer"]["with"]["producer_validation"], True
         )
@@ -125,16 +126,28 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         self.assertIn("ipq-imagebuilder-producer.py validate", validation)
         self.assertIn("provenance.json", validation)
         self.assertIn("SHA256SUMS", validation)
+        validation_index = next(
+            index
+            for index, step in enumerate(steps)
+            if step.get("name") == "Validate producer bundle and provenance"
+        )
 
         for profile in PROFILES:
-            run = next(
-                step["run"]
-                for step in steps
+            profile_index = next(
+                index
+                for index, step in enumerate(steps)
                 if step.get("name") == f"Validate {profile} ImageBuilder consumer"
             )
+            run = steps[profile_index]["run"]
+            self.assertLess(validation_index, profile_index)
             self.assertIn('ipq-imagebuilder-consumer.py" verify', run)
             self.assertIn(f"--profile {profile}", run)
             self.assertIn("--workdir \"$WORKDIR\"", run)
+
+        for step in steps:
+            if "run" in step:
+                self.assertNotIn("secrets.GITHUB_TOKEN", step["run"])
+                self.assertNotIn("artifact_url", step["run"].lower())
 
 
 class ConsumerFixtureTests(unittest.TestCase):

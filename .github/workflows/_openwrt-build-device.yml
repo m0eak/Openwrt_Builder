@@ -556,6 +556,7 @@ jobs:
         with:
           name: ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}
           path: ${{ github.workspace }}/ipq-imagebuilder-producer/
+          include-hidden-files: true
           if-no-files-found: error
           compression-level: 0
 
