@@ -117,7 +117,14 @@ def _package_names(packageinfo: Path) -> set[str]:
     )
 
 
-def _package_tokens(value: object, package_names: set[str], context: str) -> List[str]:
+def _package_tokens(
+    value: object,
+    package_names: set[str],
+    context: str,
+    *,
+    ignore_missing: bool = False,
+) -> List[str]:
+    """Validate package selectors, optionally skipping unavailable defaults."""
     if isinstance(value, str):
         tokens = value.split()
     elif isinstance(value, list):
@@ -132,6 +139,8 @@ def _package_tokens(value: object, package_names: set[str], context: str) -> Lis
         if not PACKAGE_NAME_RE.fullmatch(name):
             raise ProducerError(f"invalid package selector in {context}: {token!r}")
         if name not in package_names:
+            if ignore_missing:
+                continue
             raise ProducerError(
                 f"package selector {token!r} in {context} is not in package metadata"
             )
@@ -189,10 +198,14 @@ def write_package_intent(
     profiles = profiles_document.get("profiles") if isinstance(profiles_document, dict) else None
     if not isinstance(profiles, dict):
         raise ProducerError("ImageBuilder profiles.json has no profiles object")
+    # OpenWrt's profiles.json carries target DEFAULT_PACKAGES, which can name
+    # packages omitted from this ImageBuilder's package pool. Keep available
+    # defaults, while explicit profile/config selectors stay strict below.
     common_default = _package_tokens(
         profiles_document.get("default_packages", []),
         package_names,
         "profiles.json:default_packages",
+        ignore_missing=True,
     )
     source_manifests = {}
     for profile_name in REQUIRED_PROFILES:

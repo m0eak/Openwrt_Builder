@@ -499,6 +499,7 @@ class ProducerBundleTests(unittest.TestCase):
             profiles.write_text(
                 json.dumps(
                     {
+                        "default_packages": ["nftables", "base-files"],
                         "profiles": {
                             "glinet_gl-axt1800": {
                                 "device_packages": ["luci-app-default", "kmod-axt"]
@@ -545,6 +546,47 @@ class ProducerBundleTests(unittest.TestCase):
                 [item["name"] for item in intent["profiles"]["jdcloud_re-cs-02"]["expected"]],
                 ["base-files", "kmod-common", "kmod-jdc", "luci-app-b"],
             )
+            self.assertNotIn(
+                "nftables",
+                [
+                    item["name"]
+                    for profile in intent["profiles"].values()
+                    for item in profile["expected"]
+                ],
+            )
+
+            profiles_doc = json.loads(profiles.read_text())
+            profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].append(
+                "missing-explicit-device-package"
+            )
+            profiles.write_text(json.dumps(profiles_doc))
+            with self.assertRaisesRegex(
+                producer.ProducerError, "missing-explicit-device-package"
+            ):
+                producer.write_package_intent(
+                    config, profiles, packageinfo, manifest_dir, output
+                )
+
+            profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].pop()
+            profiles.write_text(json.dumps(profiles_doc))
+            original_config = config.read_text()
+            for selector in (
+                "missing-config-package",
+                "-missing-exclusion",
+            ):
+                with self.subTest(selector=selector):
+                    config.write_text(
+                        original_config.replace(
+                            '"luci-app-a -luci-app-default"',
+                            f'"luci-app-a {selector}"',
+                        )
+                    )
+                    with self.assertRaisesRegex(
+                        producer.ProducerError, selector.lstrip("-")
+                    ):
+                        producer.write_package_intent(
+                            config, profiles, packageinfo, manifest_dir, output
+                        )
 
     def test_stage_recovery_requires_matching_source_checksum(self):
         with tempfile.TemporaryDirectory() as td:
