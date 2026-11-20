@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import importlib.util
+import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -66,7 +68,11 @@ class ProducerBundleTests(unittest.TestCase):
         (root / "metadata/.config").write_text((ib / ".config").read_text())
         (root / "metadata/source.config").write_text((ib / ".config").read_text())
         (ib / ".targetinfo").write_text("Target: qualcommax\n")
-        (ib / ".packageinfo").write_text("Package: base-files\n")
+        (ib / ".packageinfo").write_text(
+            "Package: base-files\nPackage: kmod-example\n"
+            "Package: luci-app-a\nPackage: luci-app-b\n"
+            "Package: luci-app-default\nPackage: kmod-axt\nPackage: kmod-jdc\n"
+        )
         (root / "metadata/targetinfo").write_text((ib / ".targetinfo").read_text())
         (root / "metadata/packageinfo").write_text((ib / ".packageinfo").read_text())
         (ib / "include/kernel.mk").write_text(
@@ -80,8 +86,8 @@ class ProducerBundleTests(unittest.TestCase):
         (ib / "target/linux/qualcommax/target.mk").write_text("BOARD:=qualcommax\n")
         (ib / "target/linux/generic/config-6.12").write_text("CONFIG_NET=y\n")
         (ib / "staging_dir/host/bin/mkimage").write_bytes(b"fixture tool")
-        (ib / "packages/base-files-1.apk").write_bytes(b"fixture apk")
-        (ib / "packages/kmod-example-1.apk").write_bytes(b"fixture kmod")
+        (ib / "packages/base-files_1_aarch64_cortex-a53.apk").write_bytes(b"fixture apk")
+        (ib / "packages/kmod-example_1_aarch64_cortex-a53.apk").write_bytes(b"fixture kmod")
         (ib / "packages/packages.adb").write_bytes(b"fixture ImageBuilder index")
         (ib / "keys/openwrt-25.12.pem").write_text(
             "-----BEGIN PUBLIC KEY-----\nfixture\n-----END PUBLIC KEY-----\n"
@@ -109,11 +115,54 @@ class ProducerBundleTests(unittest.TestCase):
         (root / "repositories/targets/qualcommax/ipq60xx/packages/"
             "packages.adb").write_bytes(b"fixture target index")
         (root / "repositories/targets/qualcommax/ipq60xx/packages/"
-            "kmod-example-1.apk").write_bytes(b"fixture kmod repository")
+            "kmod-example_1_aarch64_cortex-a53.apk").write_bytes(b"fixture kmod repository")
         (root / "repositories/packages/aarch64_cortex-a53/base/"
             "packages.adb").write_bytes(b"fixture feed index")
         (root / "repositories/packages/aarch64_cortex-a53/base/"
-            "base-files-1.apk").write_bytes(b"fixture repository apk")
+            "base-files_1_aarch64_cortex-a53.apk").write_bytes(b"fixture repository apk")
+        manifest_dir = root / "producer-manifests"
+        manifest_dir.mkdir()
+        for profile_name in producer.REQUIRED_PROFILES:
+            (manifest_dir / f"openwrt-{profile_name}.manifest").write_text(
+                "base-files - 1\nkmod-example - 1\n"
+            )
+        recovery_source = root / "recovery-source"
+        recovery_source.mkdir()
+        for profile_name, contract in producer._image_contract().items():
+            image = contract["producer_fallback"][0]
+            contents = ("fixture recovery " + profile_name).encode()
+            (recovery_source / image).write_bytes(contents)
+        (recovery_source / "sha256sums").write_text(
+            "".join(
+                f"{producer._sha256(recovery_source / contract['producer_fallback'][0])}  "
+                f"{contract['producer_fallback'][0]}\n"
+                for profile_name, contract in producer._image_contract().items()
+            )
+        )
+        producer.stage_recovery_images(recovery_source, root)
+        package_intent = {
+            "schema": 1,
+            "common": [{"name": "base-files", "version": "1"}],
+            "profiles": {
+                profile_name: {
+                    "packages": [{"name": "kmod-example", "version": "1"}],
+                    "expected": [
+                        {"name": "base-files", "version": "1"},
+                        {"name": "kmod-example", "version": "1"},
+                    ],
+                    "excluded": [],
+                }
+                for profile_name in producer.REQUIRED_PROFILES
+            },
+        }
+        (root / "metadata/package-intent.json").write_text(json.dumps(package_intent))
+        manifests_out = root / "metadata/manifests"
+        manifests_out.mkdir()
+        for profile_name in producer.REQUIRED_PROFILES:
+            shutil.copy2(
+                manifest_dir / f"openwrt-{profile_name}.manifest",
+                manifests_out / f"{profile_name}.manifest",
+            )
         producer.write_manifest(root, PROVENANCE)
 
     def test_valid_standalone_apk_bundle_has_complete_hash_manifest(self):
@@ -408,18 +457,163 @@ class ProducerBundleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._make_bundle(root)
-            package = root / "imagebuilder/packages/base-files-1.apk"
+            package = root / "imagebuilder/packages/base-files_1_aarch64_cortex-a53.apk"
             package.unlink()
-            profiles = root / "imagebuilder/profiles.json"
-            profiles_doc = json.loads(profiles.read_text())
-            profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].append(
-                "missing-package"
+            intent_path = root / "metadata/package-intent.json"
+            intent = json.loads(intent_path.read_text())
+            intent["profiles"]["glinet_gl-axt1800"]["expected"].append(
+                {"name": "kmod-axt", "version": "1"}
             )
-            profiles.write_text(json.dumps(profiles_doc))
-            (root / "metadata/profiles.json").write_text(profiles.read_text())
+            intent_path.write_text(json.dumps(intent))
+            (root / "metadata/manifests/glinet_gl-axt1800.manifest").write_text(
+                "base-files - 1\nkmod-example - 1\nkmod-axt - 1\n"
+            )
+            packageinfo = root / "imagebuilder/.packageinfo"
+            packageinfo.write_text(packageinfo.read_text() + "Package: kmod-axt\n")
+            (root / "metadata/packageinfo").write_text(packageinfo.read_text())
             producer.write_manifest(root, PROVENANCE)
 
-            with self.assertRaisesRegex(producer.ProducerError, "missing-package"):
+            with self.assertRaisesRegex(producer.ProducerError, "kmod-axt"):
+                producer.validate_bundle(root)
+
+    def test_package_intent_resolves_common_and_per_profile_packages_and_negatives(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            config = root / ".config"
+            config.write_text(
+                "CONFIG_PACKAGE_base-files=y\n"
+                "CONFIG_PACKAGE_kmod-common=y\n"
+                "CONFIG_PACKAGE_luci-app-a=m\n"
+                'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_glinet_gl-axt1800="luci-app-a -luci-app-default"\n'
+                'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02="luci-app-b"\n'
+            )
+            packageinfo = root / ".packageinfo"
+            packageinfo.write_text(
+                "Package: base-files\n"
+                "Package: kmod-common\n"
+                "Package: luci-app-a\n"
+                "Package: luci-app-b\n"
+                "Package: luci-app-default\n"
+            )
+            profiles = root / "profiles.json"
+            profiles.write_text(
+                json.dumps(
+                    {
+                        "profiles": {
+                            "glinet_gl-axt1800": {
+                                "device_packages": ["luci-app-default", "kmod-axt"]
+                            },
+                            "jdcloud_re-cs-02": {
+                                "device_packages": ["luci-app-b", "kmod-jdc"]
+                            },
+                        }
+                    }
+                )
+            )
+            packageinfo.write_text(packageinfo.read_text() + "Package: kmod-axt\nPackage: kmod-jdc\n")
+            output = root / "package-intent.json"
+
+            manifest_dir = root / "manifests"
+            manifest_dir.mkdir()
+            (manifest_dir / "one-glinet_gl-axt1800.manifest").write_text(
+                "base-files - 1\nkmod-common - 1\nluci-app-a - 1\nkmod-axt - 1\n"
+            )
+            (manifest_dir / "two-jdcloud_re-cs-02.manifest").write_text(
+                "base-files - 1\nkmod-common - 1\nluci-app-b - 1\nkmod-jdc - 1\n"
+            )
+            producer.write_package_intent(
+                config, profiles, packageinfo, manifest_dir, output
+            )
+
+            intent = json.loads(output.read_text())
+            self.assertEqual(
+                intent["common"],
+                [
+                    {"name": "base-files", "version": "1"},
+                    {"name": "kmod-common", "version": "1"},
+                ],
+            )
+            self.assertEqual(
+                [item["name"] for item in intent["profiles"]["glinet_gl-axt1800"]["expected"]],
+                ["base-files", "kmod-axt", "kmod-common", "luci-app-a"],
+            )
+            self.assertEqual(
+                intent["profiles"]["glinet_gl-axt1800"]["excluded"],
+                ["luci-app-default"],
+            )
+            self.assertEqual(
+                [item["name"] for item in intent["profiles"]["jdcloud_re-cs-02"]["expected"]],
+                ["base-files", "kmod-common", "kmod-jdc", "luci-app-b"],
+            )
+
+    def test_stage_recovery_requires_matching_source_checksum(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            source = root / "source"
+            bundle = root / "bundle"
+            source.mkdir()
+            bundle.mkdir()
+            lines = []
+            for profile_name, contract in producer._image_contract().items():
+                for image_name in contract["producer_fallback"]:
+                    contents = ("producer:" + profile_name).encode()
+                    (source / image_name).write_bytes(contents)
+                    lines.append(
+                        f"{hashlib.sha256(contents).hexdigest()}  {image_name}\n"
+                    )
+            (source / "sha256sums").write_text("".join(lines))
+
+            result = producer.stage_recovery_images(source, bundle)
+
+            self.assertEqual(set(result), set(producer.REQUIRED_PROFILES))
+            self.assertTrue((bundle / "recovery/images.json").is_file())
+            for profile_name, contract in producer._image_contract().items():
+                image_name = contract["producer_fallback"][0]
+                self.assertTrue(
+                    (bundle / "recovery" / profile_name / image_name).is_file()
+                )
+
+            (source / "sha256sums").write_text("0" * 64 + "  " + lines[0].split("  ", 1)[1])
+            with self.assertRaisesRegex(producer.ProducerError, "checksum"):
+                producer.stage_recovery_images(source, bundle)
+
+    def test_bundle_validation_requires_selected_apks_for_package_intent(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_bundle(root)
+            packageinfo = root / "imagebuilder/.packageinfo"
+            packageinfo.write_text(packageinfo.read_text() + "Package: missing-common\n")
+            (root / "metadata/packageinfo").write_text(packageinfo.read_text())
+            intent = {
+                "schema": 1,
+                "common": [{"name": "base-files", "version": "1"}],
+                "profiles": {
+                    "glinet_gl-axt1800": {
+                        "packages": [{"name": "missing-common", "version": "1"}],
+                        "expected": [
+                            {"name": "base-files", "version": "1"},
+                            {"name": "kmod-example", "version": "1"},
+                            {"name": "missing-common", "version": "1"},
+                        ],
+                        "excluded": [],
+                    },
+                    "jdcloud_re-cs-02": {
+                        "packages": [{"name": "kmod-example", "version": "1"}],
+                        "expected": [
+                            {"name": "base-files", "version": "1"},
+                            {"name": "kmod-example", "version": "1"},
+                        ],
+                        "excluded": [],
+                    },
+                },
+            }
+            (root / "metadata/package-intent.json").write_text(json.dumps(intent))
+            (root / "metadata/manifests/glinet_gl-axt1800.manifest").write_text(
+                "base-files - 1\nkmod-example - 1\nmissing-common - 1\n"
+            )
+            producer.write_manifest(root, PROVENANCE)
+
+            with self.assertRaisesRegex(producer.ProducerError, "missing-common"):
                 producer.validate_bundle(root)
 
     def test_rejects_missing_public_key_when_signature_check_is_enabled(self):
@@ -467,7 +661,10 @@ class ProducerBundleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._make_bundle(root)
-            with (root / "imagebuilder/packages/base-files-1.apk").open("ab") as f:
+            with (
+                root
+                / "imagebuilder/packages/base-files_1_aarch64_cortex-a53.apk"
+            ).open("ab") as f:
                 f.write(b"tampered")
 
             with self.assertRaisesRegex(producer.ProducerError, "hash mismatch"):

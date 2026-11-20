@@ -505,6 +505,15 @@ jobs:
           cp "$BUNDLE/imagebuilder/.targetinfo" "$BUNDLE/metadata/targetinfo"
           cp "$BUNDLE/imagebuilder/.packageinfo" "$BUNDLE/metadata/packageinfo"
           cp "$PROFILES" "$BUNDLE/metadata/profiles.json"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" package-intent \
+            --config .config \
+            --profiles "$PROFILES" \
+            --packageinfo "$BUNDLE/imagebuilder/.packageinfo" \
+            --manifest-dir "$TARGET_DIR" \
+            --out "$BUNDLE/metadata/package-intent.json"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" stage-recovery \
+            --source-dir "$TARGET_DIR" \
+            --bundle-root "$BUNDLE"
 
           if grep -Fxq 'CONFIG_SIGNATURE_CHECK=y' .config; then
             PRIVATE_KEY="$PWD/private-key.pem"
@@ -554,11 +563,12 @@ jobs:
         if: ${{ inputs.producer_validation }}
         uses: actions/upload-artifact@main
         with:
-          name: ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ipq-imagebuilder-producer-${{ github.run_id }}
           path: ${{ github.workspace }}/ipq-imagebuilder-producer/
           include-hidden-files: true
           if-no-files-found: error
           compression-level: 0
+          overwrite: true
 
       - name: Remove temporary build files
         if: success()

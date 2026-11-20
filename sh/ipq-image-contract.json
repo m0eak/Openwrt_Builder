@@ -1,0 +1,25 @@
+{
+  "profiles": {
+    "glinet_gl-axt1800": {
+      "required_images": [
+        "libwrt-qualcommax-ipq60xx-glinet_gl-axt1800-initramfs-uImage.itb",
+        "libwrt-qualcommax-ipq60xx-glinet_gl-axt1800-squashfs-factory.bin",
+        "libwrt-qualcommax-ipq60xx-glinet_gl-axt1800-squashfs-factory.ubi",
+        "libwrt-qualcommax-ipq60xx-glinet_gl-axt1800-squashfs-sysupgrade.bin"
+      ],
+      "producer_fallback": [
+        "libwrt-qualcommax-ipq60xx-glinet_gl-axt1800-initramfs-uImage.itb"
+      ]
+    },
+    "jdcloud_re-cs-02": {
+      "required_images": [
+        "libwrt-qualcommax-ipq60xx-jdcloud_re-cs-02-initramfs-uImage.itb",
+        "libwrt-qualcommax-ipq60xx-jdcloud_re-cs-02-squashfs-factory.bin",
+        "libwrt-qualcommax-ipq60xx-jdcloud_re-cs-02-squashfs-sysupgrade.bin"
+      ],
+      "producer_fallback": [
+        "libwrt-qualcommax-ipq60xx-jdcloud_re-cs-02-initramfs-uImage.itb"
+      ]
+    }
+  }
+}

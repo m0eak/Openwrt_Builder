@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import importlib.util
+import hashlib
 import os
 import shutil
 import subprocess
@@ -54,7 +55,7 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
 
         inputs = _events(self.workflow)["workflow_dispatch"]["inputs"]
         self.assertTrue(inputs["producer_run_id"]["required"])
-        self.assertEqual(inputs["producer_run_attempt"]["default"], "1")
+        self.assertNotIn("producer_run_attempt", inputs)
         self.assertEqual(
             self.workflow["permissions"],
             {"actions": "read", "contents": "read"},
@@ -71,7 +72,7 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         with_args = download["with"]
         self.assertEqual(
             with_args["name"],
-            "ipq-imagebuilder-producer-${{ inputs.producer_run_id }}-${{ inputs.producer_run_attempt }}",
+            "ipq-imagebuilder-producer-${{ inputs.producer_run_id }}",
         )
         self.assertEqual(with_args["run-id"], "${{ inputs.producer_run_id }}")
         self.assertEqual(with_args["repository"], "${{ github.repository }}")
@@ -90,9 +91,10 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         self.assertEqual(len(upload_steps), 1)
         self.assertEqual(
             upload_steps[0]["with"]["name"],
-            "ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}",
+            "ipq-imagebuilder-producer-${{ github.run_id }}",
         )
         self.assertEqual(upload_steps[0]["with"]["include-hidden-files"], True)
+        self.assertEqual(upload_steps[0]["with"]["overwrite"], True)
         self.assertEqual(
             producer["jobs"]["producer"]["with"]["producer_validation"], True
         )
@@ -105,8 +107,10 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         )
         run = build_step["run"]
         self.assertEqual(build_step["env"]["PROFILE"], "${{ matrix.profile }}")
-        self.assertIn('make manifest "PROFILE=$PROFILE"', run)
-        self.assertIn('make image "PROFILE=$PROFILE"', run)
+        self.assertIn('make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"', run)
+        self.assertIn('make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"', run)
+        self.assertIn("package-args", run)
+        self.assertIn("restore-recovery-images", run)
         self.assertLess(
             run.index('make manifest "PROFILE=$PROFILE"'),
             run.index('make image "PROFILE=$PROFILE"'),
@@ -128,6 +132,7 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
         self.assertIn("ipq-imagebuilder-producer.py validate", validation)
         self.assertIn("provenance.json", validation)
         self.assertIn("SHA256SUMS", validation)
+        self.assertIn("metadata/package-intent.json", validation)
         self.assertLess(
             list(steps_by_name).index("Validate producer bundle and provenance"),
             list(steps_by_name).index("Build and verify ImageBuilder consumer"),
@@ -169,6 +174,15 @@ class ConsumerFixtureTests(unittest.TestCase):
             "base-files\n", encoding="utf-8"
         )
         (output_dir / image_name).write_bytes(b"firmware")
+        required_images = consumer.REQUIRED_IMAGES[profile]
+        sums = []
+        for required_name in required_images:
+            contents = f"required:{required_name}".encode()
+            (output_dir / required_name).write_bytes(contents)
+            sums.append(
+                f"{hashlib.sha256(contents).hexdigest()}  {required_name}\n"
+            )
+        (output_dir / "sha256sums").write_text("".join(sums), encoding="utf-8")
         return workdir, image_name
 
     def test_verify_outputs_accepts_manifest_and_declared_images(self):
@@ -201,6 +215,65 @@ class ConsumerFixtureTests(unittest.TestCase):
             ).unlink()
             with self.assertRaisesRegex(consumer.ConsumerError, "exactly one"):
                 consumer.verify_outputs(workdir, "jdcloud_re-cs-02")
+
+    def test_verify_outputs_requires_fixed_images_independent_of_profiles_json(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            workdir, _ = self._write_output_fixture(root, "glinet_gl-axt1800")
+            output_dir = workdir / "bin/targets/qualcommax/ipq60xx"
+            missing = consumer.REQUIRED_IMAGES["glinet_gl-axt1800"][0]
+            (output_dir / missing).unlink()
+            with self.assertRaisesRegex(consumer.ConsumerError, "required image"):
+                consumer.verify_outputs(workdir, "glinet_gl-axt1800")
+
+    def test_verify_outputs_checks_published_image_checksums(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            workdir, _ = self._write_output_fixture(root, "jdcloud_re-cs-02")
+            output_dir = workdir / "bin/targets/qualcommax/ipq60xx"
+            with (output_dir / "sha256sums").open("a") as stream:
+                stream.write(f"{'0' * 64}  {consumer.REQUIRED_IMAGES['jdcloud_re-cs-02'][0]}\n")
+            with self.assertRaisesRegex(consumer.ConsumerError, "checksum"):
+                consumer.verify_outputs(workdir, "jdcloud_re-cs-02")
+
+    def test_restore_uses_only_profile_scoped_producer_recovery_image(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile = "glinet_gl-axt1800"
+            workdir, _ = self._write_output_fixture(root, profile)
+            output_dir = workdir / "bin/targets/qualcommax/ipq60xx"
+            fallback = consumer.PRODUCER_FALLBACK_IMAGES[profile][0]
+            (output_dir / fallback).unlink()
+            bundle = root / "bundle"
+            recovery = bundle / "recovery" / profile
+            recovery.mkdir(parents=True)
+            contents = b"producer image for AXT only"
+            (recovery / fallback).write_bytes(contents)
+            (bundle / "recovery" / "images.json").write_text(
+                json.dumps(
+                    {
+                        profile: {
+                            fallback: {
+                                "path": f"recovery/{profile}/{fallback}",
+                                "sha256": hashlib.sha256(contents).hexdigest(),
+                            }
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (bundle / "SHA256SUMS").write_text(
+                f"{hashlib.sha256(contents).hexdigest()}  recovery/{profile}/{fallback}\n",
+                encoding="utf-8",
+            )
+
+            consumer.restore_recovery_images(bundle, workdir, profile)
+            result = consumer.verify_outputs(workdir, profile)
+
+            self.assertEqual((output_dir / fallback).read_bytes(), contents)
+            self.assertIn(fallback, result["required_images"])
+            with self.assertRaisesRegex(consumer.ConsumerError, "recovery image"):
+                consumer.restore_recovery_images(bundle, workdir, "jdcloud_re-cs-02")
 
     def test_verify_outputs_accepts_root_profiles_fallback(self):
         with tempfile.TemporaryDirectory() as td:

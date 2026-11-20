@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path, PurePosixPath
@@ -20,6 +21,8 @@ REQUIRED_FLAGS = {
 }
 MANIFEST_NAME = "provenance.json"
 CHECKSUMS_NAME = "SHA256SUMS"
+IMAGE_CONTRACT_PATH = Path(__file__).with_name("ipq-image-contract.json")
+PACKAGE_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+.-]*\Z")
 
 
 class ProducerError(ValueError):
@@ -87,10 +90,232 @@ def _file_records(root: Path, exclude: Iterable[str] = ()) -> List[Dict[str, obj
 def _parse_config(path: Path) -> Dict[str, str]:
     values = {}
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
-        match = re.fullmatch(r"(CONFIG_[A-Za-z0-9_]+)=(.*)", line)
+        match = re.fullmatch(r"(CONFIG_[A-Za-z0-9_.+-]+)=(.*)", line)
         if match:
             values[match.group(1)] = match.group(2).strip('"')
     return values
+
+
+def _image_contract() -> Mapping[str, object]:
+    try:
+        document = json.loads(IMAGE_CONTRACT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ProducerError(f"cannot read IPQ image contract: {exc}") from exc
+    profiles = document.get("profiles") if isinstance(document, dict) else None
+    if not isinstance(profiles, dict):
+        raise ProducerError("IPQ image contract has no profiles object")
+    return profiles
+
+
+def _package_names(packageinfo: Path) -> set[str]:
+    return set(
+        re.findall(
+            r"^Package:\s*([A-Za-z0-9][A-Za-z0-9+.-]*)\s*$",
+            packageinfo.read_text(encoding="utf-8", errors="replace"),
+            re.M,
+        )
+    )
+
+
+def _package_tokens(value: object, package_names: set[str], context: str) -> List[str]:
+    if isinstance(value, str):
+        tokens = value.split()
+    elif isinstance(value, list):
+        tokens = [str(token).strip() for token in value]
+    else:
+        raise ProducerError(f"{context} must be a package list")
+    normalized = set()
+    for token in tokens:
+        if not token:
+            continue
+        name = token[1:] if token.startswith("-") else token
+        if not PACKAGE_NAME_RE.fullmatch(name):
+            raise ProducerError(f"invalid package selector in {context}: {token!r}")
+        if name not in package_names:
+            raise ProducerError(
+                f"package selector {token!r} in {context} is not in package metadata"
+            )
+        normalized.add(("-" if token.startswith("-") else "") + name)
+    return sorted(normalized)
+
+
+def _parse_package_manifest(path: Path) -> Dict[str, str]:
+    if not path.is_file() or not path.stat().st_size:
+        raise ProducerError(f"producer device manifest is missing or empty: {path}")
+    packages = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        fields = line.split()
+        if not fields:
+            continue
+        if len(fields) == 3 and fields[1] == "-":
+            name, version = fields[0], fields[2]
+        elif len(fields) == 2:
+            name, version = fields
+        else:
+            raise ProducerError(f"invalid package manifest line in {path}: {line!r}")
+        if not PACKAGE_NAME_RE.fullmatch(name) or not version:
+            raise ProducerError(f"invalid package record in {path}: {line!r}")
+        previous = packages.get(name)
+        if previous is not None and previous != version:
+            raise ProducerError(
+                f"producer manifest contains conflicting versions for {name}: "
+                f"{previous} and {version}"
+            )
+        packages[name] = version
+    if not packages:
+        raise ProducerError(f"producer device manifest contains no packages: {path}")
+    return packages
+
+
+def write_package_intent(
+    config_path: Path,
+    profiles_path: Path,
+    packageinfo_path: Path,
+    manifest_dir: Path,
+    output_path: Path,
+) -> Dict[str, object]:
+    """Resolve ImageBuilder package selectors from the producer configuration.
+
+    The producer manifests are retained as evidence, but they are not used as
+    the selector source. A manifest can be generated from the shared build
+    before a per-device ImageBuilder install and therefore omit packages that
+    are present in the standalone APK pool.
+    """
+    package_names = _package_names(packageinfo_path)
+    if not package_names:
+        raise ProducerError("ImageBuilder package metadata contains no packages")
+    config = _parse_config(config_path)
+    profiles_document = json.loads(profiles_path.read_text(encoding="utf-8"))
+    profiles = profiles_document.get("profiles") if isinstance(profiles_document, dict) else None
+    if not isinstance(profiles, dict):
+        raise ProducerError("ImageBuilder profiles.json has no profiles object")
+    common_default = _package_tokens(
+        profiles_document.get("default_packages", []),
+        package_names,
+        "profiles.json:default_packages",
+    )
+    source_manifests = {}
+    for profile_name in REQUIRED_PROFILES:
+        matches = sorted(manifest_dir.glob(f"*-{profile_name}.manifest"))
+        if len(matches) != 1:
+            raise ProducerError(
+                f"expected one producer manifest for {profile_name}, found {len(matches)}"
+            )
+        source_manifests[profile_name] = _parse_package_manifest(matches[0])
+        unknown = set(source_manifests[profile_name]) - package_names
+        if unknown:
+            raise ProducerError(
+                f"producer manifest {profile_name} references packages missing from "
+                f"ImageBuilder metadata: {', '.join(sorted(unknown))}"
+            )
+    common_names = {
+        name
+        for name in package_names
+        if config.get("CONFIG_PACKAGE_" + name) == "y"
+    }
+    common = []
+    for name in sorted(common_names):
+        versions = {
+            manifest[name]
+            for manifest in source_manifests.values()
+            if name in manifest
+        }
+        common.append({"name": name, "version": versions.pop() if len(versions) == 1 else "*"})
+
+    manifest_output_dir = output_path.parent / "manifests"
+    manifest_output_dir.mkdir(parents=True, exist_ok=True)
+    result_profiles = {}
+    for profile_name in REQUIRED_PROFILES:
+        profile = profiles.get(profile_name)
+        if not isinstance(profile, dict):
+            raise ProducerError(f"profile {profile_name} is missing from profiles.json")
+        defaults = set(common_default) | set(
+            _package_tokens(
+                profile.get("device_packages", []),
+                package_names,
+                f"profiles.json:{profile_name}:device_packages",
+            )
+        )
+        selector = config.get(
+            "CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_" + profile_name,
+            "",
+        )
+        configured = _package_tokens(
+            selector, package_names, f"CONFIG_TARGET_DEVICE_PACKAGES_{profile_name}"
+        )
+        excluded = {token[1:] for token in configured if token.startswith("-")}
+        desired_names = (
+            common_names
+            | {token for token in configured if not token.startswith("-")}
+            | defaults
+        ) - excluded
+        manifest = source_manifests[profile_name]
+        desired = {name: manifest.get(name, "*") for name in desired_names}
+        manifest_path = next(manifest_dir.glob(f"*-{profile_name}.manifest"))
+        shutil.copy2(
+            manifest_path, manifest_output_dir / f"{profile_name}.manifest"
+        )
+        result_profiles[profile_name] = {
+            "packages": [
+                {"name": name, "version": desired[name]}
+                for name in sorted(set(desired) - common_names)
+            ],
+            "expected": [
+                {"name": name, "version": desired[name]}
+                for name in sorted(desired)
+            ],
+            "excluded": sorted(excluded),
+        }
+    document = {"schema": 1, "common": common, "profiles": result_profiles}
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
+    return document
+
+
+def _parse_sha256sums(path: Path) -> Dict[str, str]:
+    if not path.is_file():
+        raise ProducerError(f"producer source checksum file is missing: {path}")
+    result = {}
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        parts = line.strip().split(maxsplit=1)
+        if len(parts) != 2 or not re.fullmatch(r"[0-9a-fA-F]{64}", parts[0]):
+            continue
+        name = parts[1].lstrip("*").removeprefix("./")
+        result[Path(name).name] = parts[0].lower()
+    return result
+
+
+def stage_recovery_images(source_dir: Path, bundle_root: Path) -> Dict[str, object]:
+    """Copy fixed recovery images from this producer after checking its source sums."""
+    source_dir = source_dir.resolve()
+    bundle_root = bundle_root.resolve()
+    source_sums = _parse_sha256sums(source_dir / "sha256sums")
+    recovery = {}
+    for profile_name, profile_contract in _image_contract().items():
+        if profile_name not in REQUIRED_PROFILES:
+            continue
+        files = {}
+        for image_name in profile_contract.get("producer_fallback", []):
+            source = source_dir / image_name
+            if not source.is_file() or source.stat().st_size == 0:
+                raise ProducerError(
+                    f"producer output for {profile_name} is missing recovery image {image_name}"
+                )
+            digest = _sha256(source)
+            if source_sums.get(image_name) != digest:
+                raise ProducerError(
+                    f"producer checksum does not match recovery image {image_name}"
+                )
+            relative = f"recovery/{profile_name}/{image_name}"
+            destination = bundle_root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
+            files[image_name] = {"path": relative, "sha256": digest}
+        recovery[profile_name] = files
+    path = bundle_root / "recovery/images.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(recovery, indent=2, sort_keys=True) + "\n")
+    return recovery
 
 
 def _kernel_vermagic(path: Path) -> str:
@@ -330,6 +555,9 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
         "metadata/targetinfo",
         "metadata/packageinfo",
         "metadata/profiles.json",
+        "metadata/package-intent.json",
+        *(f"metadata/manifests/{profile}.manifest" for profile in REQUIRED_PROFILES),
+        "recovery/images.json",
     ):
         _require_file(root, relative)
     config = _parse_config(ib / ".config")
@@ -400,29 +628,113 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
     ]
     if not apks:
         raise ProducerError("ImageBuilder APK package pool is empty")
-    apk_names = {path.name for path in apks}
+    package_names = _package_names(ib / ".packageinfo")
+    arch = config.get("CONFIG_TARGET_ARCH_PACKAGES", "")
+    apk_versions: Dict[str, set[str]] = {}
+    for package_name in package_names:
+        for path in apks:
+            prefix = package_name + "_"
+            if not path.name.startswith(prefix) or not path.name.endswith(".apk"):
+                continue
+            for package_arch in (arch, "all", "noarch"):
+                suffix = "_" + package_arch + ".apk"
+                if path.name.endswith(suffix):
+                    version = path.name[len(prefix) : -len(suffix)]
+                    if version:
+                        apk_versions.setdefault(package_name, set()).add(version)
     kmods = [path for path in apks if path.name.startswith("kmod-")]
     if not kmods:
         raise ProducerError("ImageBuilder package pool contains no kmod APKs")
-    missing_packages = []
+    intent = json.loads(
+        (root / "metadata/package-intent.json").read_text(encoding="utf-8")
+    )
+    if not isinstance(intent, dict) or intent.get("schema") != 1:
+        raise ProducerError("package-intent.json has an unsupported schema")
+    common = intent.get("common")
+    if not isinstance(common, list):
+        raise ProducerError("package-intent.json has no common package list")
+    intent_profiles = intent.get("profiles")
+    if not isinstance(intent_profiles, dict):
+        raise ProducerError("package-intent.json has no profiles object")
+    common_by_name = {}
+    for record in common:
+        if (
+            not isinstance(record, dict)
+            or record.get("name") not in package_names
+            or not isinstance(record.get("version"), str)
+        ):
+            raise ProducerError("package-intent common contains an invalid package record")
+        common_by_name[record["name"]] = record["version"]
     for profile_name in REQUIRED_PROFILES:
         profile = profiles[profile_name]
-        package_names = profile.get("device_packages") if isinstance(profile, dict) else None
-        if not isinstance(package_names, list) or not package_names:
+        if not isinstance(profile, dict):
+            raise ProducerError(f"profile {profile_name} is invalid")
+        if not isinstance(profile.get("device_packages"), list):
+            raise ProducerError(f"profile {profile_name} has no device_packages metadata")
+        profile_intent = intent_profiles.get(profile_name)
+        if not isinstance(profile_intent, dict):
+            raise ProducerError(f"package-intent is missing profile {profile_name}")
+        expected = profile_intent.get("expected")
+        if not isinstance(expected, list):
+            raise ProducerError(f"package-intent:{profile_name} has no expected package list")
+        expected_by_name = {}
+        for record in expected:
+            if (
+                not isinstance(record, dict)
+                or record.get("name") not in package_names
+                or not isinstance(record.get("version"), str)
+            ):
+                raise ProducerError(
+                    f"package-intent:{profile_name} contains an invalid package record"
+                )
+            expected_by_name[record["name"]] = record["version"]
+        source_manifest = root / f"metadata/manifests/{profile_name}.manifest"
+        if any(
+            expected_by_name.get(name) not in (version, "*") and version != "*"
+            for name, version in common_by_name.items()
+        ):
             raise ProducerError(
-                f"profile {profile_name} has no device_packages package metadata"
+                f"package-intent common package versions disagree for {profile_name}"
             )
-        for package_name in package_names:
-            name = str(package_name).strip()
-            if not name or name.startswith("-"):
-                continue
-            if not any(filename.startswith(name + "-") for filename in apk_names):
-                missing_packages.append(f"{profile_name}:{name}")
-    if missing_packages:
-        raise ProducerError(
-            "profile packages are absent from standalone APK pool: "
-            + ", ".join(sorted(missing_packages))
+        excluded = profile_intent.get("excluded")
+        if not isinstance(excluded, list) or any(
+            not isinstance(name, str) or name not in package_names for name in excluded
+        ):
+            raise ProducerError(f"package-intent:{profile_name} has invalid exclusions")
+        missing = sorted(
+            name
+            for name, version in expected_by_name.items()
+            if (
+                version != "*" and version not in apk_versions.get(name, set())
+            ) or (version == "*" and not apk_versions.get(name))
         )
+        if missing:
+            raise ProducerError(
+                f"producer manifest packages are absent from matching-ABI APK pool "
+                f"for {profile_name}: {', '.join(missing)}"
+            )
+    recovery = json.loads((root / "recovery/images.json").read_text(encoding="utf-8"))
+    contract = _image_contract()
+    for profile_name in REQUIRED_PROFILES:
+        profile_recovery = recovery.get(profile_name) if isinstance(recovery, dict) else None
+        if not isinstance(profile_recovery, dict):
+            raise ProducerError(f"producer recovery metadata is missing {profile_name}")
+        for image_name in contract[profile_name].get("producer_fallback", []):
+            record = profile_recovery.get(image_name)
+            expected_path = f"recovery/{profile_name}/{image_name}"
+            if not isinstance(record, dict) or record.get("path") != expected_path:
+                raise ProducerError(
+                    f"producer recovery image is missing or cross-device for {profile_name}: {image_name}"
+                )
+            image_path = root / expected_path
+            if (
+                not image_path.is_file()
+                or image_path.stat().st_size == 0
+                or record.get("sha256") != _sha256(image_path)
+            ):
+                raise ProducerError(
+                    f"producer recovery image checksum failed for {profile_name}: {image_name}"
+                )
     indexes = [
         path
         for path in ib.rglob("packages.adb")
@@ -533,6 +845,21 @@ def _argparse() -> argparse.ArgumentParser:
     seal.add_argument("--builder-revision")
     validate = sub.add_parser("validate", help="validate a sealed producer bundle")
     validate.add_argument("--bundle-root", required=True, type=Path)
+    intent = sub.add_parser(
+        "package-intent",
+        help="write resolved package selections for the ImageBuilder consumer",
+    )
+    intent.add_argument("--config", required=True, type=Path)
+    intent.add_argument("--profiles", required=True, type=Path)
+    intent.add_argument("--packageinfo", required=True, type=Path)
+    intent.add_argument("--manifest-dir", required=True, type=Path)
+    intent.add_argument("--out", required=True, type=Path)
+    recovery = sub.add_parser(
+        "stage-recovery",
+        help="stage profile-scoped recovery images after validating source checksums",
+    )
+    recovery.add_argument("--source-dir", required=True, type=Path)
+    recovery.add_argument("--bundle-root", required=True, type=Path)
     normalize = sub.add_parser(
         "normalize-host-tools",
         help="drop host-tool symlinks that cannot be reproduced by the consumer",
@@ -572,6 +899,20 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     sort_keys=True,
                 )
             )
+            return 0
+        if args.command == "package-intent":
+            intent = write_package_intent(
+                args.config,
+                args.profiles,
+                args.packageinfo,
+                args.manifest_dir,
+                args.out,
+            )
+            print(json.dumps(intent, indent=2, sort_keys=True))
+            return 0
+        if args.command == "stage-recovery":
+            recovery = stage_recovery_images(args.source_dir, args.bundle_root)
+            print(json.dumps(recovery, indent=2, sort_keys=True))
             return 0
         result = validate_bundle(args.bundle_root.resolve())
         print(json.dumps(result, indent=2, sort_keys=True))

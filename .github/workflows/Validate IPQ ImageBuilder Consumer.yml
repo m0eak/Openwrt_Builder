@@ -7,11 +7,6 @@ on:
         description: Completed producer workflow run ID.
         required: true
         type: string
-      producer_run_attempt:
-        description: Producer workflow run attempt used for the artifact name.
-        required: false
-        default: '1'
-        type: string
 
 permissions:
   actions: read
@@ -34,7 +29,7 @@ jobs:
       - name: Download producer ImageBuilder artifact
         uses: actions/download-artifact@main
         with:
-          name: ipq-imagebuilder-producer-${{ inputs.producer_run_id }}-${{ inputs.producer_run_attempt }}
+          name: ipq-imagebuilder-producer-${{ inputs.producer_run_id }}
           path: ${{ runner.temp }}/ipq-imagebuilder-producer
           repository: ${{ github.repository }}
           run-id: ${{ inputs.producer_run_id }}
@@ -49,6 +44,7 @@ jobs:
           test -s "$BUNDLE/imagebuilder.tar.zst"
           test -s "$BUNDLE/provenance.json"
           test -s "$BUNDLE/SHA256SUMS"
+          test -s "$BUNDLE/metadata/package-intent.json"
           python3 sh/ipq-imagebuilder-producer.py validate \
             --bundle-root "$BUNDLE"
 
@@ -66,9 +62,19 @@ jobs:
             -C "$WORKDIR" --strip-components=1
           test -s "$WORKDIR/Makefile"
           cd "$WORKDIR"
-          make manifest "PROFILE=$PROFILE"
-          make image "PROFILE=$PROFILE"
+          PACKAGE_ARGS=$(python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+            package-args \
+            --package-intent "$BUNDLE/metadata/package-intent.json" \
+            --profile "$PROFILE")
+          make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+          make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+            restore-recovery-images \
+            --bundle-root "$BUNDLE" \
+            --workdir "$WORKDIR" \
+            --profile "$PROFILE"
           test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"
           python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
             --workdir "$WORKDIR" \
-            --profile "$PROFILE"
+            --profile "$PROFILE" \
+            --package-intent "$BUNDLE/metadata/package-intent.json"

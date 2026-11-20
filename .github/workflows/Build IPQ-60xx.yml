@@ -52,7 +52,7 @@ jobs:
       - name: Download producer ImageBuilder artifact
         uses: actions/download-artifact@main
         with:
-          name: ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}
+          name: ipq-imagebuilder-producer-${{ github.run_id }}
           path: ${{ runner.temp }}/ipq-imagebuilder-producer
 
       - name: Validate producer bundle and provenance
@@ -81,13 +81,24 @@ jobs:
             -C "$WORKDIR" --strip-components=1
           test -s "$WORKDIR/Makefile"
           cd "$WORKDIR"
-          make manifest "PROFILE=$PROFILE"
-          make image "PROFILE=$PROFILE"
+          PACKAGE_ARGS=$(python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+            package-args \
+            --package-intent "$BUNDLE/metadata/package-intent.json" \
+            --profile "$PROFILE")
+          echo "Applying resolved package intent for $PROFILE"
+          make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+          make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+            restore-recovery-images \
+            --bundle-root "$BUNDLE" \
+            --workdir "$WORKDIR" \
+            --profile "$PROFILE"
           OUTPUT_DIR="$WORKDIR/bin/targets/qualcommax/ipq60xx"
           test -d "$OUTPUT_DIR"
           python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
             --workdir "$WORKDIR" \
-            --profile "$PROFILE"
+            --profile "$PROFILE" \
+            --package-intent "$BUNDLE/metadata/package-intent.json"
 
           manifest=$(find "$OUTPUT_DIR" -maxdepth 1 -type f \
             -name "*-${PROFILE}.manifest" -print -quit)
@@ -97,6 +108,10 @@ jobs:
           python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
             --manifest "$manifest" \
             --out "$PACKAGE_LIST_DIR/packages.txt"
+          python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
+            --manifest "$manifest" \
+            --out "$PACKAGE_LIST_DIR/packages-full.txt" \
+            --flavor ""
           rm -rf "$OUTPUT_DIR/packages"
 
       - name: Upload device firmware artifact
@@ -105,13 +120,15 @@ jobs:
           name: firmware-${{ matrix.device }}
           path: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}/bin/targets/qualcommax/ipq60xx/*
           if-no-files-found: error
+          overwrite: true
 
       - name: Upload device package list artifact
         uses: actions/upload-artifact@main
         with:
           name: package-list-${{ matrix.device }}
-          path: ${{ github.workspace }}/package-list-${{ matrix.device }}/packages.txt
+          path: ${{ github.workspace }}/package-list-${{ matrix.device }}/*
           if-no-files-found: error
+          overwrite: true
 
   publish_release:
     name: 汇总并发布固件

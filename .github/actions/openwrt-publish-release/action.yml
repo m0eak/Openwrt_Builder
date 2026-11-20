@@ -114,6 +114,20 @@ runs:
           sed 's/^/- /' "$dir/packages.txt" >> release-body.md
         done
 
+        full_package_heading_written=false
+        for dir in all-artifacts/package-list-*; do
+          [ -f "$dir/packages-full.txt" ] || continue
+          if [ "$full_package_heading_written" = false ]; then
+            echo "" >> release-body.md
+            echo "### Full package list (from image manifest)" >> release-body.md
+            full_package_heading_written=true
+          fi
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          echo "" >> release-body.md
+          echo "#### $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages-full.txt" >> release-body.md
+        done
+
         echo "::group::Release metadata"
         echo "release-tag=$RELEASE_TAG"
         sed -n '1,160p' release-body.md

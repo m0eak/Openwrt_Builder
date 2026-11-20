@@ -431,6 +431,28 @@ class PackageListTests(unittest.TestCase):
             self.assertEqual(pa.read_text().splitlines(), ["luci-app-mosdns", "luci-app-passwall2"])
             self.assertEqual(pb.read_text().splitlines(), ["luci-app-aria2", "luci-app-mosdns"])
 
+    def test_empty_flavor_includes_all_manifest_packages_and_default_stays_luci_only(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            manifest = root / "device.manifest"
+            manifest.write_text(
+                "base-files - 1\n"
+                "kernel - 2\n"
+                "luci-app-firewall - 3\n"
+                "kmod-ath11k - 4\n"
+            )
+
+            luci = h.extract_package_list(manifest, root / "packages.txt")
+            full = h.extract_package_list(
+                manifest, root / "packages-full.txt", flavor=""
+            )
+
+            self.assertEqual(luci.read_text().splitlines(), ["luci-app-firewall"])
+            self.assertEqual(
+                full.read_text().splitlines(),
+                ["base-files", "kernel", "kmod-ath11k", "luci-app-firewall"],
+            )
+
 
 class ManifestRuleTests(unittest.TestCase):
     def test_make_reads_each_device_rootfs_and_propagates_apk_errors(self):
@@ -584,14 +606,14 @@ class WorkflowStructureTests(unittest.TestCase):
         )
         self.assertEqual(
             download["with"]["name"],
-            "ipq-imagebuilder-producer-${{ github.run_id }}-${{ github.run_attempt }}",
+            "ipq-imagebuilder-producer-${{ github.run_id }}",
         )
         build_image = next(
             step for step in image_steps
             if step.get("name") == "Build and verify device image"
         )
-        self.assertIn('make manifest "PROFILE=$PROFILE"', build_image["run"])
-        self.assertIn('make image "PROFILE=$PROFILE"', build_image["run"])
+        self.assertIn('make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"', build_image["run"])
+        self.assertIn('make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"', build_image["run"])
         self.assertIn("ipq-imagebuilder-consumer.py", build_image["run"])
         upload_names = {
             step["with"]["name"]
@@ -602,10 +624,44 @@ class WorkflowStructureTests(unittest.TestCase):
             upload_names,
             {"firmware-${{ matrix.device }}", "package-list-${{ matrix.device }}"},
         )
+        for upload in image_steps:
+            if upload.get("uses") == "actions/upload-artifact@main":
+                self.assertTrue(upload["with"]["overwrite"])
+        package_step = next(
+            step for step in image_steps
+            if step.get("name") == "Build and verify device image"
+        )
+        self.assertIn('--out "$PACKAGE_LIST_DIR/packages.txt"', package_step["run"])
+        self.assertIn('--out "$PACKAGE_LIST_DIR/packages-full.txt"', package_step["run"])
+        self.assertIn('--flavor ""', package_step["run"])
+        package_upload = next(
+            step for step in image_steps
+            if step.get("name") == "Upload device package list artifact"
+        )
+        self.assertIn("/package-list-${{ matrix.device }}/*", package_upload["with"]["path"])
         self.assertEqual(jobs["publish_release"]["needs"], "image")
         self.assertEqual(
             jobs["publish_release"]["steps"][-1]["uses"],
             "./.github/actions/openwrt-publish-release",
+        )
+        publish_action = yaml.safe_load(
+            (ROOT / ".github/actions/openwrt-publish-release/action.yml").read_text()
+        )
+        release_body_script = next(
+            step["run"] for step in publish_action["runs"]["steps"]
+            if step.get("name") == "Generate release tag and body"
+        )
+        self.assertIn("### LuCI package list", release_body_script)
+        self.assertIn('"$dir/packages.txt"', release_body_script)
+        self.assertIn('"$dir/packages-full.txt"', release_body_script)
+        self.assertRegex(
+            release_body_script,
+            r'(?s)full_package_heading_written=false.*?'
+            r'\[ -f "\$dir/packages-full\.txt" \] \|\| continue.*?'
+            r'if \[ "\$full_package_heading_written" = false \]; then\s+'
+            r'echo "" >> release-body\.md\s+'
+            r'echo "### Full package list \(from image manifest\)" >> release-body\.md\s+'
+            r'full_package_heading_written=true\s+fi',
         )
 
         r = yaml.safe_load(reusable.read_text())
