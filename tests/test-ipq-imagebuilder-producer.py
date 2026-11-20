@@ -38,6 +38,28 @@ PROVENANCE = {
 
 
 class ProducerBundleTests(unittest.TestCase):
+    def test_package_name_validation_accepts_real_underscore_package(self):
+        package = "ipq-wifi-glinet_gl-axt1800"
+        with tempfile.TemporaryDirectory() as td:
+            manifest = Path(td) / "device.manifest"
+            packageinfo = Path(td) / ".packageinfo"
+            manifest.write_text(
+                f"{package} - 2026.05.18~e20f4c6f-r1\n",
+                encoding="utf-8",
+            )
+            packageinfo.write_text(f"Package: {package}\n", encoding="utf-8")
+
+            self.assertEqual(
+                producer._parse_package_manifest(manifest),
+                {package: "2026.05.18~e20f4c6f-r1"},
+            )
+            self.assertEqual(producer._package_names(packageinfo), {package})
+
+    def test_package_name_validation_rejects_obviously_invalid_names(self):
+        for package in ("_leading-underscore", "bad/name", "bad name"):
+            with self.subTest(package=package):
+                self.assertIsNone(producer.PACKAGE_NAME_RE.fullmatch(package))
+
     def _make_bundle(self, root: Path):
         ib = root / "imagebuilder"
         (ib / "include").mkdir(parents=True)

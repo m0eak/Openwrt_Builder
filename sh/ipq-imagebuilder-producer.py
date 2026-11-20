@@ -22,7 +22,7 @@ REQUIRED_FLAGS = {
 MANIFEST_NAME = "provenance.json"
 CHECKSUMS_NAME = "SHA256SUMS"
 IMAGE_CONTRACT_PATH = Path(__file__).with_name("ipq-image-contract.json")
-PACKAGE_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+.-]*\Z")
+PACKAGE_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*\Z")
 
 
 class ProducerError(ValueError):
@@ -110,7 +110,7 @@ def _image_contract() -> Mapping[str, object]:
 def _package_names(packageinfo: Path) -> set[str]:
     return set(
         re.findall(
-            r"^Package:\s*([A-Za-z0-9][A-Za-z0-9+.-]*)\s*$",
+            r"^Package:\s*([A-Za-z0-9][A-Za-z0-9+._-]*)\s*$",
             packageinfo.read_text(encoding="utf-8", errors="replace"),
             re.M,
         )

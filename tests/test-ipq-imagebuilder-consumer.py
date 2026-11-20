@@ -144,6 +144,52 @@ class ConsumerWorkflowStructureTests(unittest.TestCase):
                 self.assertNotIn("artifact_url", step["run"].lower())
 
 
+class ConsumerPackageValidationTests(unittest.TestCase):
+    def test_package_arguments_accept_underscore_package_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            intent_path = Path(td) / "package-intent.json"
+            package = "ipq-wifi-glinet_gl-axt1800"
+            intent_path.write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "common": [],
+                        "profiles": {
+                            PROFILES[0]: {
+                                "expected": [{"name": package, "version": "1"}],
+                                "excluded": [],
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertEqual(consumer.package_arguments(intent_path, PROFILES[0]), [package])
+
+    def test_package_arguments_reject_obviously_invalid_name(self):
+        with tempfile.TemporaryDirectory() as td:
+            intent_path = Path(td) / "package-intent.json"
+            intent_path.write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "common": [],
+                        "profiles": {
+                            PROFILES[0]: {
+                                "expected": [{"name": "bad/name", "version": "1"}],
+                                "excluded": [],
+                            }
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(consumer.ConsumerError, "invalid record"):
+                consumer.package_arguments(intent_path, PROFILES[0])
+
+
 class ConsumerFixtureTests(unittest.TestCase):
     def _write_output_fixture(self, root: Path, profile: str):
         workdir = root / profile

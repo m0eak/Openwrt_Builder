@@ -15,7 +15,7 @@ from typing import Dict, List, Mapping, Sequence
 
 PROFILES = ("glinet_gl-axt1800", "jdcloud_re-cs-02")
 IMAGEBUILDER_BIN_DIR = Path("bin/targets/qualcommax/ipq60xx")
-PACKAGE_NAME_RE = re.compile(r"-?[A-Za-z0-9][A-Za-z0-9+.-]*\Z")
+PACKAGE_NAME_RE = re.compile(r"-?[A-Za-z0-9][A-Za-z0-9+._-]*\Z")
 IMAGE_CONTRACT_PATH = Path(__file__).with_name("ipq-image-contract.json")
 _IMAGE_CONTRACT = json.loads(IMAGE_CONTRACT_PATH.read_text(encoding="utf-8"))["profiles"]
 REQUIRED_IMAGES = {
