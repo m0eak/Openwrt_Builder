@@ -610,6 +610,49 @@ class ProducerBundleTests(unittest.TestCase):
                             config, profiles, packageinfo, manifest_dir, output
                         )
 
+    def test_package_intent_ignores_manifest_runtime_dependencies_missing_from_packageinfo(
+        self,
+    ):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_bundle(root)
+            manifest_dir = root / "producer-manifests"
+            runtime_dependencies = (
+                "libcurl4 - 8.10.1\n"
+                "libubus20251202 - 2025.12.02\n"
+                "kernel - 6.12.1\n"
+            )
+            for profile_name in producer.REQUIRED_PROFILES:
+                path = manifest_dir / f"openwrt-{profile_name}.manifest"
+                path.write_text(path.read_text() + runtime_dependencies)
+
+            producer.write_package_intent(
+                root / "imagebuilder/.config",
+                root / "imagebuilder/profiles.json",
+                root / "imagebuilder/.packageinfo",
+                manifest_dir,
+                root / "metadata/package-intent.json",
+            )
+            producer.write_manifest(root, PROVENANCE)
+
+            intent = json.loads((root / "metadata/package-intent.json").read_text())
+            expected_names = {
+                record["name"]
+                for profile in intent["profiles"].values()
+                for record in profile["expected"]
+            }
+            self.assertEqual(expected_names, {"base-files", "kmod-example"})
+            for profile_name in producer.REQUIRED_PROFILES:
+                evidence = (
+                    root / f"metadata/manifests/{profile_name}.manifest"
+                ).read_text()
+                self.assertIn("libcurl4 - 8.10.1", evidence)
+                self.assertIn("libubus20251202 - 2025.12.02", evidence)
+                self.assertIn("kernel - 6.12.1", evidence)
+
+            result = producer.validate_bundle(root)
+            self.assertEqual(result["profiles"], list(producer.REQUIRED_PROFILES))
+
     def test_stage_recovery_requires_matching_source_checksum(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

@@ -185,10 +185,9 @@ def write_package_intent(
 ) -> Dict[str, object]:
     """Resolve ImageBuilder package selectors from the producer configuration.
 
-    The producer manifests are retained as evidence, but they are not used as
-    the selector source. A manifest can be generated from the shared build
-    before a per-device ImageBuilder install and therefore omit packages that
-    are present in the standalone APK pool.
+    The producer manifests are retained as evidence and may include runtime
+    dependencies outside the standalone ImageBuilder package pool. Selectors
+    are resolved only against ImageBuilder package metadata.
     """
     package_names = _package_names(packageinfo_path)
     if not package_names:
@@ -214,13 +213,9 @@ def write_package_intent(
             raise ProducerError(
                 f"expected one producer manifest for {profile_name}, found {len(matches)}"
             )
+        # Shared-build manifests describe the full installed firmware and may
+        # include base/runtime packages that ImageBuilder cannot select.
         source_manifests[profile_name] = _parse_package_manifest(matches[0])
-        unknown = set(source_manifests[profile_name]) - package_names
-        if unknown:
-            raise ProducerError(
-                f"producer manifest {profile_name} references packages missing from "
-                f"ImageBuilder metadata: {', '.join(sorted(unknown))}"
-            )
     common_names = {
         name
         for name in package_names
