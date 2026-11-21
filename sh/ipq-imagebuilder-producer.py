@@ -21,8 +21,11 @@ REQUIRED_FLAGS = {
 }
 MANIFEST_NAME = "provenance.json"
 CHECKSUMS_NAME = "SHA256SUMS"
+APK_CATALOG = "metadata/apk-pool.json"
+APK_INDEX = "imagebuilder/packages/packages.adb"
 IMAGE_CONTRACT_PATH = Path(__file__).with_name("ipq-image-contract.json")
 PACKAGE_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._-]*\Z")
+APK_VERSION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9+._~:-]*\Z")
 
 
 class ProducerError(ValueError):
@@ -107,44 +110,153 @@ def _image_contract() -> Mapping[str, object]:
     return profiles
 
 
-def _package_names(packageinfo: Path) -> set[str]:
-    return set(
-        re.findall(
-            r"^Package:\s*([A-Za-z0-9][A-Za-z0-9+._-]*)\s*$",
-            packageinfo.read_text(encoding="utf-8", errors="replace"),
-            re.M,
-        )
+def _package_metadata(packageinfo: Path) -> Dict[str, set[str]]:
+    abi_versions: Dict[str, set[str]] = {}
+    name = ""
+    for line in packageinfo.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("Package:"):
+            name = line.partition(":")[2].strip()
+            if PACKAGE_NAME_RE.fullmatch(name):
+                abi_versions.setdefault(name, set())
+            else:
+                name = ""
+        elif line.startswith("@@"):
+            name = ""
+        elif name and line.startswith("ABI-Version:"):
+            abi_versions[name].add(line.partition(":")[2].strip())
+    return abi_versions
+
+
+def _dump_apk_index(bundle_root: Path, index: Path) -> List[Dict[str, object]]:
+    """Extract the package fields needed to validate the pool after download."""
+    apk = bundle_root.resolve() / "imagebuilder/staging_dir/host/bin/apk"
+    result = subprocess.run(
+        [apk, "--allow-untrusted", "adbdump", index],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
+    if result.returncode or not result.stdout.startswith("#%SCHEMA: 78646E69\n"):
+        raise ProducerError("host apk could not decode the staged packages.adb")
+    records = []
+    blocks = re.split(r"^  - name: ", result.stdout, flags=re.M)
+    count = re.search(r"^packages: # (\d+) items?$", blocks[0], re.M)
+    if not count or int(count[1]) != len(blocks) - 1 or len(blocks) == 1:
+        raise ProducerError("staged packages.adb has an invalid package list")
+    if re.search(r"^(?:name-spec|pkgname-spec):", result.stdout, re.M):
+        raise ProducerError("staged packages.adb uses a custom APK filename format")
+    for block in blocks[1:]:
+        name, _, fields = block.partition("\n")
+        metadata = dict(re.findall(r"^    (version|arch|file-size): (\S+)$", fields, re.M))
+        size = metadata.get("file-size", "")
+        if not size.isdecimal():
+            raise ProducerError("staged packages.adb has an invalid APK file size")
+        abi_base = ""
+        tag = re.search(r"^    tags:.*\n((?:      - [^\n]*\n)*)", fields, re.M)
+        provides = re.search(r"^    provides:.*\n((?:      - [^\n]*\n)*)", fields, re.M)
+        if tag and provides:
+            suffixes = re.findall(r"^      - openwrt:abiversion=(\S+)$", tag[1], re.M)
+            if len(suffixes) == 1 and name.endswith(suffixes[0]):
+                base = name.removesuffix(suffixes[0])
+                if any(
+                    provided.partition("=")[0] == base
+                    for provided in re.findall(r"^      - (\S+)$", provides[1], re.M)
+                ):
+                    abi_base = base
+        records.append({
+            "name": name,
+            "version": metadata.get("version", ""),
+            "arch": metadata.get("arch", ""),
+            "size": int(size),
+            "abi_base": abi_base,
+        })
+    return records
 
 
-def _apk_versions(
-    apk_root: Path, package_names: set[str], architecture: str
-) -> Dict[str, set[str]]:
-    """Return package versions available for target-ABI or architecture-independent APKs."""
-    versions: Dict[str, set[str]] = {}
+def _apk_file(record: object) -> str:
+    if not isinstance(record, dict) or any(
+        not isinstance(record.get(key), str) or not pattern.fullmatch(record[key])
+        for key, pattern in (
+            ("name", PACKAGE_NAME_RE), ("version", APK_VERSION_RE), ("arch", PACKAGE_NAME_RE)
+        )
+    ):
+        raise ProducerError("APK pool contains invalid package metadata")
+    return f"{record['name']}-{record['version']}.apk"
+
+
+def _apk_digests(
+    bundle_root: Path, checksums: Optional[Mapping[str, str]] = None
+) -> Dict[str, str]:
+    pool = bundle_root / "imagebuilder/packages"
+    if pool.is_symlink() or pool.parent.is_symlink():
+        raise ProducerError("ImageBuilder APK pool must be an archived directory")
+    files = [pool / "packages.adb", *sorted(pool.glob("*.apk"))]
+    digests = {}
+    for path in files:
+        if path.is_symlink() or not path.is_file() or not path.stat().st_size:
+            raise ProducerError(f"ImageBuilder APK pool file is missing, linked or empty: {path.name}")
+        digests[path.name] = (
+            _sha256(path) if checksums is None else checksums[_relative_path(bundle_root, path)]
+        )
+    return digests
+
+
+def _apk_pool(
+    document: object, digests: Mapping[str, str], bundle_root: Path,
+    metadata: Mapping[str, set[str]], architecture: str,
+) -> Tuple[Dict[str, set[str]], Dict[str, str]]:
+    """Check that the catalog covers the staged pool and resolve its available names."""
     if not architecture:
         raise ProducerError("ImageBuilder config has no CONFIG_TARGET_ARCH_PACKAGES")
-    architectures = (architecture, "all", "noarch")
-    for path in apk_root.rglob("*.apk"):
-        if not path.is_file() or path.stat().st_size == 0:
+    if (
+        not isinstance(document, dict)
+        or document.get("schema") != 1
+        or not isinstance(document.get("packages"), list)
+        or document.get("index_sha256") != digests["packages.adb"]
+    ):
+        raise ProducerError("APK pool catalog does not match the staged packages.adb")
+    versions: Dict[str, set[str]] = {}
+    aliases: Dict[str, str] = {}
+    indexed = set()
+    for record in document["packages"]:
+        filename = _apk_file(record)
+        path = bundle_root / "imagebuilder/packages" / filename
+        if filename in indexed:
+            raise ProducerError(f"duplicate APK filename in staged index: {filename}")
+        if filename not in digests:
+            raise ProducerError(f"indexed APK is missing from imagebuilder/packages: {filename}")
+        if record.get("sha256") != digests[filename] or record.get("size") != path.stat().st_size:
+            raise ProducerError(f"indexed APK does not match its staged file: {filename}")
+        indexed.add(filename)
+        if record["arch"] not in (architecture, "all", "noarch"):
             continue
-        filename = path.name[:-4]
-        for package_arch in architectures:
-            suffix = "_" + package_arch
-            if not filename.endswith(suffix):
-                continue
-            package_version = filename[: -len(suffix)]
-            separators = [
-                index for index, char in enumerate(package_version) if char == "_"
-            ]
-            for index in reversed(separators):
-                name = package_version[:index]
-                version = package_version[index + 1 :]
-                if name in package_names and version:
-                    versions.setdefault(name, set()).add(version)
-                    break
-            break
-    return versions
+        name = record["name"]
+        versions.setdefault(name, set()).add(record["version"])
+        base = record.get("abi_base")
+        if not isinstance(base, str) or not base or base.startswith("kmod-"):
+            continue
+        separator = "-" if base[-1] in "0123456789" else ""
+        if any(name == base + separator + abi for abi in metadata.get(base, ()) if abi):
+            if aliases.setdefault(base, name) != name:
+                raise ProducerError(f"ambiguous ABI packages in the staged index for {base}")
+    unindexed = sorted(set(digests) - {"packages.adb"} - indexed)
+    if unindexed:
+        raise ProducerError("staged APKs are absent from packages.adb: " + ", ".join(unindexed))
+    if not versions:
+        raise ProducerError("ImageBuilder matching-ABI APK package pool is empty")
+    return versions, aliases
+
+
+def _check_package_versions(
+    expected: Mapping[str, str], versions: Mapping[str, set[str]], profile: str
+) -> None:
+    missing = sorted(
+        name for name, version in expected.items()
+        if name not in versions or (version != "*" and version not in versions[name])
+    )
+    if missing:
+        raise ProducerError(
+            f"producer manifest packages are absent from matching-ABI APK pool "
+            f"for {profile}: {', '.join(missing)}"
+        )
 
 
 def _package_tokens(
@@ -207,11 +319,7 @@ def _parse_package_manifest(path: Path) -> Dict[str, str]:
 
 
 def write_package_intent(
-    config_path: Path,
-    profiles_path: Path,
-    packageinfo_path: Path,
-    manifest_dir: Path,
-    output_path: Path,
+    bundle_root: Path, config_path: Path, manifest_dir: Path,
 ) -> Dict[str, object]:
     """Resolve ImageBuilder package selectors from the producer configuration.
 
@@ -220,16 +328,27 @@ def write_package_intent(
     selectors are validated against package metadata and filtered by APK
     availability for the target architecture.
     """
-    package_names = _package_names(packageinfo_path)
-    if not package_names:
+    ib = bundle_root / "imagebuilder"
+    output_path = bundle_root / "metadata/package-intent.json"
+    metadata = _package_metadata(ib / ".packageinfo")
+    if not metadata:
         raise ProducerError("ImageBuilder package metadata contains no packages")
     config = _parse_config(config_path)
-    apk_versions = _apk_versions(
-        config_path.parent,
-        package_names,
-        config.get("CONFIG_TARGET_ARCH_PACKAGES", ""),
-    )
-    profiles_document = json.loads(profiles_path.read_text(encoding="utf-8"))
+    arch = _parse_config(ib / ".config").get("CONFIG_TARGET_ARCH_PACKAGES", "")
+    if arch != config.get("CONFIG_TARGET_ARCH_PACKAGES"):
+        raise ProducerError("source and ImageBuilder configs disagree on CONFIG_TARGET_ARCH_PACKAGES")
+    digests = _apk_digests(bundle_root)
+    records = _dump_apk_index(bundle_root, bundle_root / APK_INDEX)
+    for record in records:
+        record["sha256"] = digests.get(_apk_file(record))
+    catalog = {"schema": 1, "index_sha256": digests["packages.adb"], "packages": records}
+    apk_versions, aliases = _apk_pool(catalog, digests, bundle_root, metadata, arch)
+    package_names = set(metadata) | set(aliases.values())
+
+    def actual_name(name: str) -> str:
+        return name if name in apk_versions else aliases.get(name, name)
+
+    profiles_document = json.loads((ib / "profiles.json").read_text(encoding="utf-8"))
     profiles = profiles_document.get("profiles") if isinstance(profiles_document, dict) else None
     if not isinstance(profiles, dict):
         raise ProducerError("ImageBuilder profiles.json has no profiles object")
@@ -242,7 +361,10 @@ def write_package_intent(
         "profiles.json:default_packages",
         ignore_missing=True,
     )
-    common_default = [name for name in common_default if name in apk_versions]
+    common_default = {
+        actual_name(name) for name in common_default if actual_name(name) in apk_versions
+    }
+    manifest_paths = {}
     source_manifests = {}
     for profile_name in REQUIRED_PROFILES:
         matches = sorted(manifest_dir.glob(f"*-{profile_name}.manifest"))
@@ -252,11 +374,12 @@ def write_package_intent(
             )
         # Shared-build manifests describe the full installed firmware and may
         # include base/runtime packages that ImageBuilder cannot select.
+        manifest_paths[profile_name] = matches[0]
         source_manifests[profile_name] = _parse_package_manifest(matches[0])
     common_names = {
-        name
+        actual_name(name)
         for name in package_names
-        if config.get("CONFIG_PACKAGE_" + name) == "y" and name in apk_versions
+        if config.get("CONFIG_PACKAGE_" + name) == "y" and actual_name(name) in apk_versions
     }
     common = []
     for name in sorted(common_names):
@@ -267,8 +390,6 @@ def write_package_intent(
         }
         common.append({"name": name, "version": versions.pop() if len(versions) == 1 else "*"})
 
-    manifest_output_dir = output_path.parent / "manifests"
-    manifest_output_dir.mkdir(parents=True, exist_ok=True)
     result_profiles = {}
     for profile_name in REQUIRED_PROFILES:
         profile = profiles.get(profile_name)
@@ -280,14 +401,14 @@ def write_package_intent(
             f"profiles.json:{profile_name}:device_packages",
         )
         missing_explicit_device = sorted(
-            name for name in explicit_device if name not in apk_versions
+            name for name in explicit_device if actual_name(name) not in apk_versions
         )
         if missing_explicit_device:
             raise ProducerError(
                 f"explicit device packages are absent from matching-ABI APK pool "
                 f"for {profile_name}: {', '.join(missing_explicit_device)}"
             )
-        defaults = set(common_default) | set(explicit_device)
+        defaults = common_default | {actual_name(name) for name in explicit_device}
         selector = config.get(
             "CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_" + profile_name,
             "",
@@ -296,11 +417,15 @@ def write_package_intent(
             selector, package_names, f"CONFIG_TARGET_DEVICE_PACKAGES_{profile_name}"
         )
         excluded = {token[1:] for token in configured if token.startswith("-")}
+        excluded.update({actual_name(name) for name in excluded})
+        excluded.update(
+            base for base, name in aliases.items() if name in excluded and base not in apk_versions
+        )
         explicit_configured = {
             token for token in configured if not token.startswith("-")
         }
         missing_configured = sorted(
-            name for name in explicit_configured if name not in apk_versions
+            name for name in explicit_configured if actual_name(name) not in apk_versions
         )
         if missing_configured:
             raise ProducerError(
@@ -309,15 +434,12 @@ def write_package_intent(
             )
         desired_names = (
             common_names
-            | explicit_configured
+            | {actual_name(name) for name in explicit_configured}
             | defaults
         ) - excluded
         manifest = source_manifests[profile_name]
         desired = {name: manifest.get(name, "*") for name in desired_names}
-        manifest_path = next(manifest_dir.glob(f"*-{profile_name}.manifest"))
-        shutil.copy2(
-            manifest_path, manifest_output_dir / f"{profile_name}.manifest"
-        )
+        _check_package_versions(desired, apk_versions, profile_name)
         result_profiles[profile_name] = {
             "packages": [
                 {"name": name, "version": desired[name]}
@@ -330,7 +452,11 @@ def write_package_intent(
             "excluded": sorted(excluded),
         }
     document = {"schema": 1, "common": common, "profiles": result_profiles}
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_output_dir = output_path.parent / "manifests"
+    manifest_output_dir.mkdir(parents=True, exist_ok=True)
+    for profile_name, path in manifest_paths.items():
+        shutil.copy2(path, manifest_output_dir / f"{profile_name}.manifest")
+    (bundle_root / APK_CATALOG).write_text(json.dumps(catalog, sort_keys=True) + "\n")
     output_path.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n")
     return document
 
@@ -619,6 +745,7 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
         "metadata/packageinfo",
         "metadata/profiles.json",
         "metadata/package-intent.json",
+        APK_CATALOG,
         *(f"metadata/manifests/{profile}.manifest" for profile in REQUIRED_PROFILES),
         "recovery/images.json",
     ):
@@ -686,26 +813,16 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
     if not any(path.is_file() and path.stat().st_size for path in host_tools):
         raise ProducerError("ImageBuilder staging_dir/host/bin inputs are missing")
 
-    apks = [
-        path for path in ib.rglob("*.apk") if path.is_file() and path.stat().st_size
-    ]
-    if not apks:
-        raise ProducerError("ImageBuilder APK package pool is empty")
-    package_names = _package_names(ib / ".packageinfo")
+    checksums = _verify_hashes(root)
+    digests = _apk_digests(root, checksums)
+    catalog = json.loads((root / APK_CATALOG).read_text(encoding="utf-8"))
+    metadata = _package_metadata(ib / ".packageinfo")
     arch = config.get("CONFIG_TARGET_ARCH_PACKAGES", "")
-    apk_versions: Dict[str, set[str]] = {}
-    for package_name in package_names:
-        for path in apks:
-            prefix = package_name + "_"
-            if not path.name.startswith(prefix) or not path.name.endswith(".apk"):
-                continue
-            for package_arch in (arch, "all", "noarch"):
-                suffix = "_" + package_arch + ".apk"
-                if path.name.endswith(suffix):
-                    version = path.name[len(prefix) : -len(suffix)]
-                    if version:
-                        apk_versions.setdefault(package_name, set()).add(version)
-    kmods = [path for path in apks if path.name.startswith("kmod-")]
+    apk_versions, aliases = _apk_pool(catalog, digests, root, metadata, arch)
+    package_names = set(metadata) | set(aliases.values())
+    kmods = [
+        name for name in apk_versions if name.startswith("kmod-")
+    ]
     if not kmods:
         raise ProducerError("ImageBuilder package pool contains no kmod APKs")
     intent = json.loads(
@@ -751,31 +868,26 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
                     f"package-intent:{profile_name} contains an invalid package record"
                 )
             expected_by_name[record["name"]] = record["version"]
-        source_manifest = root / f"metadata/manifests/{profile_name}.manifest"
-        if any(
-            expected_by_name.get(name) not in (version, "*") and version != "*"
-            for name, version in common_by_name.items()
-        ):
-            raise ProducerError(
-                f"package-intent common package versions disagree for {profile_name}"
-            )
         excluded = profile_intent.get("excluded")
         if not isinstance(excluded, list) or any(
             not isinstance(name, str) or name not in package_names for name in excluded
         ):
             raise ProducerError(f"package-intent:{profile_name} has invalid exclusions")
-        missing = sorted(
-            name
-            for name, version in expected_by_name.items()
-            if (
-                version != "*" and version not in apk_versions.get(name, set())
-            ) or (version == "*" and not apk_versions.get(name))
-        )
-        if missing:
+        if set(excluded) & expected_by_name.keys():
+            raise ProducerError(f"package-intent:{profile_name} selects an excluded package")
+        if any(
+            name not in expected_by_name
+            or (version != "*" and expected_by_name[name] not in (version, "*"))
+            for name, version in common_by_name.items()
+            if name not in excluded
+        ):
             raise ProducerError(
-                f"producer manifest packages are absent from matching-ABI APK pool "
-                f"for {profile_name}: {', '.join(missing)}"
+                f"package-intent common package versions disagree for {profile_name}"
             )
+        _check_package_versions(expected_by_name, apk_versions, profile_name)
+        evidence = _parse_package_manifest(root / f"metadata/manifests/{profile_name}.manifest")
+        if any(evidence.get(name, "*") != version for name, version in expected_by_name.items()):
+            raise ProducerError(f"package-intent versions disagree with producer manifest for {profile_name}")
     recovery = json.loads((root / "recovery/images.json").read_text(encoding="utf-8"))
     contract = _image_contract()
     for profile_name in REQUIRED_PROFILES:
@@ -798,14 +910,6 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
                 raise ProducerError(
                     f"producer recovery image checksum failed for {profile_name}: {image_name}"
                 )
-    indexes = [
-        path
-        for path in ib.rglob("packages.adb")
-        if path.is_file() and path.stat().st_size
-    ]
-    if not indexes:
-        raise ProducerError("ImageBuilder APK repository index is missing or empty")
-
     signing_enabled = config.get("CONFIG_SIGNATURE_CHECK") == "y"
     keys_dir = ib / "keys"
     public_keys = []
@@ -871,7 +975,6 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
     for name, expected in REQUIRED_FLAGS.items():
         if provenance["build_flags"].get(name) != expected:
             raise ProducerError(f"provenance build flags require {name}={expected}")
-    checksums = _verify_hashes(root)
     current_payload = [
         {
             "path": relative,
@@ -886,9 +989,9 @@ def validate_bundle(bundle_root: Path) -> Dict[str, object]:
 
     return {
         "profiles": list(REQUIRED_PROFILES),
-        "apk_count": len(apks),
+        "apk_count": len(digests) - 1,
         "kmod_count": len(kmods),
-        "index_count": len(indexes),
+        "index_count": 1,
         "signature_keys": [str(path.relative_to(ib)) for path in public_keys],
         "hashed_file_count": len(checksums),
         "source_revision": provenance["source_revision"],
@@ -912,11 +1015,9 @@ def _argparse() -> argparse.ArgumentParser:
         "package-intent",
         help="write resolved package selections for the ImageBuilder consumer",
     )
+    intent.add_argument("--bundle-root", required=True, type=Path)
     intent.add_argument("--config", required=True, type=Path)
-    intent.add_argument("--profiles", required=True, type=Path)
-    intent.add_argument("--packageinfo", required=True, type=Path)
     intent.add_argument("--manifest-dir", required=True, type=Path)
-    intent.add_argument("--out", required=True, type=Path)
     recovery = sub.add_parser(
         "stage-recovery",
         help="stage profile-scoped recovery images after validating source checksums",
@@ -964,14 +1065,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             )
             return 0
         if args.command == "package-intent":
-            intent = write_package_intent(
-                args.config,
-                args.profiles,
-                args.packageinfo,
-                args.manifest_dir,
-                args.out,
-            )
-            print(json.dumps(intent, indent=2, sort_keys=True))
+            write_package_intent(args.bundle_root.resolve(), args.config, args.manifest_dir)
             return 0
         if args.command == "stage-recovery":
             recovery = stage_recovery_images(args.source_dir, args.bundle_root)

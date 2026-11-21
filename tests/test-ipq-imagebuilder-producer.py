@@ -53,12 +53,33 @@ class ProducerBundleTests(unittest.TestCase):
                 producer._parse_package_manifest(manifest),
                 {package: "2026.05.18~e20f4c6f-r1"},
             )
-            self.assertEqual(producer._package_names(packageinfo), {package})
+            self.assertEqual(set(producer._package_metadata(packageinfo)), {package})
 
     def test_package_name_validation_rejects_obviously_invalid_names(self):
         for package in ("_leading-underscore", "bad/name", "bad name"):
             with self.subTest(package=package):
                 self.assertIsNone(producer.PACKAGE_NAME_RE.fullmatch(package))
+
+    def _stage_fixture_apks(self, ib, packages):
+        apk = ib / "staging_dir/host/bin/apk"
+        apk.parent.mkdir(parents=True, exist_ok=True)
+        apk.write_text('#!/bin/sh\n[ "$1 $2" = "--allow-untrusted adbdump" ] && cat "$3"\n')
+        apk.chmod(0o755)
+        pool = ib / "packages"
+        pool.mkdir(exist_ok=True)
+        index = pool / "packages.adb"
+        rows = index.read_text().split("\n", 2)[2] if index.exists() else ""
+        for name, version, arch, *abi in packages:
+            (pool / f"{name}-{version}.apk").write_bytes(b"apk")
+            rows += (
+                f"  - name: {name}\n    version: {version}\n"
+                f"    arch: {arch}\n    file-size: 3\n"
+            )
+            if abi:
+                base, suffix = abi
+                rows += f"    provides: # 1 items\n      - {base}\n"
+                rows += f"    tags: # 1 items\n      - openwrt:abiversion={suffix}\n"
+        index.write_text(f"#%SCHEMA: 78646E69\npackages: # {rows.count('  - name: ')} items\n{rows}")
 
     def _make_bundle(self, root: Path):
         ib = root / "imagebuilder"
@@ -108,9 +129,9 @@ class ProducerBundleTests(unittest.TestCase):
         (ib / "target/linux/qualcommax/target.mk").write_text("BOARD:=qualcommax\n")
         (ib / "target/linux/generic/config-6.12").write_text("CONFIG_NET=y\n")
         (ib / "staging_dir/host/bin/mkimage").write_bytes(b"fixture tool")
-        (ib / "packages/base-files_1_aarch64_cortex-a53.apk").write_bytes(b"fixture apk")
-        (ib / "packages/kmod-example_1_aarch64_cortex-a53.apk").write_bytes(b"fixture kmod")
-        (ib / "packages/packages.adb").write_bytes(b"fixture ImageBuilder index")
+        self._stage_fixture_apks(
+            ib, [("base-files", "1", "aarch64_cortex-a53"), ("kmod-example", "1", "aarch64_cortex-a53")]
+        )
         (ib / "keys/openwrt-25.12.pem").write_text(
             "-----BEGIN PUBLIC KEY-----\nfixture\n-----END PUBLIC KEY-----\n"
         )
@@ -162,35 +183,14 @@ class ProducerBundleTests(unittest.TestCase):
             )
         )
         producer.stage_recovery_images(recovery_source, root)
-        package_intent = {
-            "schema": 1,
-            "common": [{"name": "base-files", "version": "1"}],
-            "profiles": {
-                profile_name: {
-                    "packages": [{"name": "kmod-example", "version": "1"}],
-                    "expected": [
-                        {"name": "base-files", "version": "1"},
-                        {"name": "kmod-example", "version": "1"},
-                    ],
-                    "excluded": [],
-                }
-                for profile_name in producer.REQUIRED_PROFILES
-            },
-        }
-        (root / "metadata/package-intent.json").write_text(json.dumps(package_intent))
-        manifests_out = root / "metadata/manifests"
-        manifests_out.mkdir()
-        for profile_name in producer.REQUIRED_PROFILES:
-            shutil.copy2(
-                manifest_dir / f"openwrt-{profile_name}.manifest",
-                manifests_out / f"{profile_name}.manifest",
-            )
+        producer.write_package_intent(root, ib / ".config", manifest_dir)
         producer.write_manifest(root, PROVENANCE)
 
     def test_valid_standalone_apk_bundle_has_complete_hash_manifest(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._make_bundle(root)
+            (root / "imagebuilder/staging_dir/host/bin/apk").chmod(0o644)
 
             result = producer.validate_bundle(root)
 
@@ -479,8 +479,6 @@ class ProducerBundleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             self._make_bundle(root)
-            package = root / "imagebuilder/packages/base-files_1_aarch64_cortex-a53.apk"
-            package.unlink()
             intent_path = root / "metadata/package-intent.json"
             intent = json.loads(intent_path.read_text())
             intent["profiles"]["glinet_gl-axt1800"]["expected"].append(
@@ -501,6 +499,8 @@ class ProducerBundleTests(unittest.TestCase):
     def test_package_intent_resolves_common_and_per_profile_packages_and_negatives(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
+            ib = root / "imagebuilder"
+            ib.mkdir()
             config = root / ".config"
             config.write_text(
                 'CONFIG_TARGET_ARCH_PACKAGES="aarch64_cortex-a53"\n'
@@ -508,10 +508,12 @@ class ProducerBundleTests(unittest.TestCase):
                 "CONFIG_PACKAGE_kmod-common=y\n"
                 "CONFIG_PACKAGE_base-internal=y\n"
                 "CONFIG_PACKAGE_luci-app-a=m\n"
+                "CONFIG_PACKAGE_luci-app-default=y\n"
                 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_glinet_gl-axt1800="luci-app-a -luci-app-default"\n'
                 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02="luci-app-b"\n'
             )
-            packageinfo = root / ".packageinfo"
+            (ib / ".config").write_text(config.read_text())
+            packageinfo = ib / ".packageinfo"
             packageinfo.write_text(
                 "Package: base-files\n"
                 "Package: kmod-common\n"
@@ -521,7 +523,7 @@ class ProducerBundleTests(unittest.TestCase):
                 "Package: base-internal\n"
                 "Package: default-internal\n"
             )
-            profiles = root / "profiles.json"
+            profiles = ib / "profiles.json"
             profiles.write_text(
                 json.dumps(
                     {
@@ -542,9 +544,7 @@ class ProducerBundleTests(unittest.TestCase):
                 )
             )
             packageinfo.write_text(packageinfo.read_text() + "Package: kmod-axt\nPackage: kmod-jdc\n")
-            apk_dir = root / "imagebuilder/packages"
-            apk_dir.mkdir(parents=True)
-            for package, version, arch in (
+            self._stage_fixture_apks(ib, (
                 ("base-files", "1", "aarch64_cortex-a53"),
                 ("kmod-common", "2-r1", "aarch64_cortex-a53"),
                 ("luci-app-a", "3", "all"),
@@ -552,28 +552,26 @@ class ProducerBundleTests(unittest.TestCase):
                 ("luci-app-default", "3", "all"),
                 ("kmod-axt", "5", "aarch64_cortex-a53"),
                 ("kmod-jdc", "6", "aarch64_cortex-a53"),
-            ):
-                (apk_dir / f"{package}_{version}_{arch}.apk").write_bytes(b"apk")
-            output = root / "package-intent.json"
+            ))
+            output = root / "metadata/package-intent.json"
 
             manifest_dir = root / "manifests"
             manifest_dir.mkdir()
             (manifest_dir / "one-glinet_gl-axt1800.manifest").write_text(
-                "base-files - 1\nkmod-common - 1\nluci-app-a - 1\nkmod-axt - 1\n"
+                "base-files - 1\nkmod-common - 2-r1\nluci-app-a - 3\nkmod-axt - 5\n"
             )
             (manifest_dir / "two-jdcloud_re-cs-02.manifest").write_text(
-                "base-files - 1\nkmod-common - 1\nluci-app-b - 1\nkmod-jdc - 1\n"
+                "base-files - 1\nkmod-common - 2-r1\nluci-app-b - 4\nluci-app-default - 3\nkmod-jdc - 6\n"
             )
-            producer.write_package_intent(
-                config, profiles, packageinfo, manifest_dir, output
-            )
+            producer.write_package_intent(root, config, manifest_dir)
 
             intent = json.loads(output.read_text())
             self.assertEqual(
                 intent["common"],
                 [
                     {"name": "base-files", "version": "1"},
-                    {"name": "kmod-common", "version": "1"},
+                    {"name": "kmod-common", "version": "2-r1"},
+                    {"name": "luci-app-default", "version": "3"},
                 ],
             )
             self.assertEqual(
@@ -586,7 +584,7 @@ class ProducerBundleTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["name"] for item in intent["profiles"]["jdcloud_re-cs-02"]["expected"]],
-                ["base-files", "kmod-common", "kmod-jdc", "luci-app-b"],
+                ["base-files", "kmod-common", "kmod-jdc", "luci-app-b", "luci-app-default"],
             )
             self.assertNotIn(
                 "nftables",
@@ -617,9 +615,7 @@ class ProducerBundleTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 producer.ProducerError, "missing-explicit-device-package"
             ):
-                producer.write_package_intent(
-                    config, profiles, packageinfo, manifest_dir, output
-                )
+                producer.write_package_intent(root, config, manifest_dir)
 
             profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].pop()
             profiles.write_text(json.dumps(profiles_doc))
@@ -628,9 +624,7 @@ class ProducerBundleTests(unittest.TestCase):
             )
             profiles.write_text(json.dumps(profiles_doc))
             with self.assertRaisesRegex(producer.ProducerError, "base-internal"):
-                producer.write_package_intent(
-                    config, profiles, packageinfo, manifest_dir, output
-                )
+                producer.write_package_intent(root, config, manifest_dir)
             profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].pop()
             profiles.write_text(json.dumps(profiles_doc))
             original_config = config.read_text()
@@ -649,26 +643,190 @@ class ProducerBundleTests(unittest.TestCase):
                     with self.assertRaisesRegex(
                         producer.ProducerError, selector.lstrip("-")
                     ):
-                        producer.write_package_intent(
-                            config, profiles, packageinfo, manifest_dir, output
-                        )
+                        producer.write_package_intent(root, config, manifest_dir)
 
-    def test_apk_pool_parses_longest_package_name_and_version(self):
+    def test_package_intent_uses_staged_openwrt_apks_and_abi_names(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            (root / "short_name_1_aarch64_cortex-a53.apk").write_bytes(b"apk")
-            (root / "long_name_2-r1_aarch64_cortex-a53.apk").write_bytes(b"apk")
-
-            versions = producer._apk_versions(
-                root,
-                {"long", "long_name", "short", "short_name"},
-                "aarch64_cortex-a53",
+            self._make_bundle(root)
+            ib = root / "imagebuilder"
+            source = root / "source"
+            (source / "bin").mkdir(parents=True)
+            config = source / ".config"
+            config.write_text(
+                (ib / ".config").read_text()
+                + 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_glinet_gl-axt1800="libcurl libubus liblua5.4 libnghttp2 kmod-hwmon-pwmfan"\n'
+                + 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02="libcurl libubus liblua5.4 libnghttp2"\n'
+                + "CONFIG_PACKAGE_source-only=y\n"
             )
-
-            self.assertEqual(
-                versions,
-                {"long_name": {"2-r1"}, "short_name": {"1"}},
+            packages = (
+                ("ipq-wifi-glinet_gl-axt1800", "ipq-wifi-glinet_gl-axt1800", "2026.05.18~e20f4c6f-r1", ""),
+                ("kmod-hwmon-pwmfan", "kmod-hwmon-pwmfan", "6.12.112-r1", ""),
+                ("libcurl", "libcurl4", "8.22.0-r1", "4"),
+                ("libubus", "libubus20251202", "2026.06.28~24864e78-r2", "20251202"),
+                ("liblua5.4", "liblua5.4-5.4", "5.4.8-r1", "-5.4"),
+                ("libnghttp2", "libnghttp2-14", "1.69.0-r1", "-14"),
             )
+            packageinfo = ib / ".packageinfo"
+            metadata = packageinfo.read_text() + "Package: source-only\n"
+            staged = []
+            for selector, name, version, suffix in packages:
+                metadata += f"Package: {selector}\n"
+                if selector == "libubus":
+                    metadata += "Version: 2026.06.28~24864e7840b3a02a9ef76284a373f6b2f00b8a9b-r2\n"
+                if selector == "kmod-hwmon-pwmfan":
+                    metadata += "ABI-Version: 6.12.112-1\n"
+                row = (name, version, "aarch64_cortex-a53")
+                if suffix:
+                    metadata += f"ABI-Version: {suffix.lstrip('-')}\n"
+                    row += (selector, suffix)
+                staged.append(row)
+            self._stage_fixture_apks(ib, staged)
+            packageinfo.write_text(metadata)
+            (source / "bin/source-only_1_aarch64_cortex-a53.apk").write_bytes(b"apk")
+            profiles_path = ib / "profiles.json"
+            profiles = json.loads(profiles_path.read_text())
+            profiles["profiles"]["glinet_gl-axt1800"]["device_packages"].append(packages[0][0])
+            profiles_path.write_text(json.dumps(profiles))
+            for profile in producer.REQUIRED_PROFILES:
+                manifest = root / f"producer-manifests/openwrt-{profile}.manifest"
+                manifest.write_text(
+                    manifest.read_text()
+                    + "".join(f"{name} - {version}\n" for _, name, version, _ in packages)
+                )
+
+            intent = producer.write_package_intent(root, config, root / "producer-manifests")
+            expected = {
+                profile: {row["name"]: row["version"] for row in record["expected"]}
+                for profile, record in intent["profiles"].items()
+            }
+            self.assertNotIn("source-only", expected["glinet_gl-axt1800"])
+            for profile in producer.REQUIRED_PROFILES:
+                for selector, name, version, _ in packages:
+                    if profile == "glinet_gl-axt1800" or selector.startswith("lib"):
+                        self.assertEqual(expected[profile][name], version)
+
+            for name, content in (
+                ("source.config", config.read_text()),
+                ("packageinfo", metadata),
+                ("profiles.json", profiles_path.read_text()),
+            ):
+                (root / "metadata" / name).write_text(content)
+            (ib / "staging_dir/host/bin/apk").chmod(0o644)
+            producer.write_manifest(root, PROVENANCE)
+            self.assertEqual(producer.validate_bundle(root)["apk_count"], len(packages) + 2)
+
+            (ib / "staging_dir/host/bin/apk").chmod(0o755)
+            config.write_text(config.read_text().replace('libcurl libubus', '-libcurl libubus', 1))
+            (root / "metadata/source.config").write_text(config.read_text())
+            manifest = root / "producer-manifests/openwrt-glinet_gl-axt1800.manifest"
+            manifest.write_text(manifest.read_text().replace("libcurl4 - 8.22.0-r1\n", ""))
+            intent = producer.write_package_intent(root, config, root / "producer-manifests")
+            profile = intent["profiles"]["glinet_gl-axt1800"]
+            self.assertEqual(profile["excluded"], ["libcurl", "libcurl4"])
+            self.assertNotIn("libcurl4", {row["name"] for row in profile["expected"]})
+            producer.write_manifest(root, PROVENANCE)
+            producer.validate_bundle(root)
+
+    def test_explicit_device_apk_requires_matching_arch_and_archived_file(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_bundle(root)
+            ib = root / "imagebuilder"
+            config = root / "metadata/source.config"
+            manifests = root / "producer-manifests"
+            pool = ib / "packages"
+            target = "kmod-example-1.apk"
+            index = pool / "packages.adb"
+            index.write_text(index.read_text().replace(
+                "kmod-example\n    version: 1\n    arch: aarch64_cortex-a53",
+                "kmod-example\n    version: 1\n    arch: x86_64",
+            ))
+            with self.assertRaisesRegex(producer.ProducerError, "matching-ABI APK pool.*kmod-example"):
+                producer.write_package_intent(root, config, manifests)
+
+            self._stage_fixture_apks(ib, [("kmod-unused", "1", "aarch64_cortex-a53")])
+            profiles = ib / "profiles.json"
+            original = profiles.read_text()
+            doc = json.loads(original)
+            for profile in doc["profiles"].values():
+                profile["device_packages"].remove("kmod-example")
+            profiles.write_text(json.dumps(doc))
+            producer.write_package_intent(root, config, manifests)
+            profiles.write_text(original)
+            intent_path = root / "metadata/package-intent.json"
+            intent = json.loads(intent_path.read_text())
+            intent["profiles"]["glinet_gl-axt1800"]["expected"].append(
+                {"name": "kmod-example", "version": "1"}
+            )
+            intent_path.write_text(json.dumps(intent))
+            producer.write_manifest(root, PROVENANCE)
+            with self.assertRaisesRegex(producer.ProducerError, "matching-ABI APK pool"):
+                producer.validate_bundle(root)
+
+            source_pool = root / "metadata/bin"
+            source_pool.mkdir()
+            (pool / target).rename(source_pool / target)
+            for state in ("missing", "empty", "symlink"):
+                with self.subTest(state=state):
+                    if state == "empty":
+                        (pool / target).touch()
+                    elif state == "symlink":
+                        (pool / target).symlink_to(source_pool / target)
+                    with self.assertRaisesRegex(producer.ProducerError, re.escape(target)):
+                        producer.write_package_intent(root, config, manifests)
+                    producer.write_manifest(root, PROVENANCE)
+                    with self.assertRaisesRegex(producer.ProducerError, re.escape(target)):
+                        producer.validate_bundle(root)
+                    (pool / target).unlink(missing_ok=True)
+
+    def test_apk_catalog_rejects_resealed_index_and_package_changes(self):
+        for relative, update, expected in (
+            ("packages.adb", lambda content: content + b"# replacement\n", "catalog does not match"),
+            ("base-files-1.apk", lambda content: b"bad", "indexed APK does not match"),
+            ("unindexed-1.apk", lambda content: b"apk", "absent from packages.adb"),
+        ):
+            with self.subTest(path=relative), tempfile.TemporaryDirectory() as td:
+                root = Path(td)
+                self._make_bundle(root)
+                path = root / "imagebuilder/packages" / relative
+                path.write_bytes(update(path.read_bytes() if path.exists() else b""))
+                producer.write_manifest(root, PROVENANCE)
+                with self.assertRaisesRegex(producer.ProducerError, expected):
+                    producer.validate_bundle(root)
+                if relative == "unindexed-1.apk":
+                    with self.assertRaisesRegex(producer.ProducerError, expected):
+                        producer.write_package_intent(
+                            root, root / "metadata/source.config", root / "producer-manifests"
+                        )
+
+    def test_package_intent_requires_exact_manifest_version(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_bundle(root)
+            manifests = root / "producer-manifests"
+            (manifests / "openwrt-glinet_gl-axt1800.manifest").write_text(
+                "base-files - 2\nkmod-example - 1\n"
+            )
+            with self.assertRaisesRegex(producer.ProducerError, "matching-ABI APK pool.*base-files"):
+                producer.write_package_intent(root, root / "metadata/source.config", manifests)
+
+    def test_explicit_exclusion_overrides_common_package_in_validation(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            self._make_bundle(root)
+            config = root / "metadata/source.config"
+            config.write_text(
+                config.read_text() + "CONFIG_PACKAGE_base-files=y\n"
+                'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_glinet_gl-axt1800="-base-files"\n'
+            )
+            manifests = root / "producer-manifests"
+            (manifests / "openwrt-glinet_gl-axt1800.manifest").write_text("kmod-example - 1\n")
+            intent = producer.write_package_intent(root, config, manifests)
+            self.assertEqual(intent["common"], [{"name": "base-files", "version": "1"}])
+            self.assertEqual(intent["profiles"]["glinet_gl-axt1800"]["excluded"], ["base-files"])
+            producer.write_manifest(root, PROVENANCE)
+            producer.validate_bundle(root)
 
     def test_package_intent_ignores_manifest_runtime_dependencies_missing_from_packageinfo(
         self,
@@ -687,11 +845,7 @@ class ProducerBundleTests(unittest.TestCase):
                 path.write_text(path.read_text() + runtime_dependencies)
 
             producer.write_package_intent(
-                root / "imagebuilder/.config",
-                root / "imagebuilder/profiles.json",
-                root / "imagebuilder/.packageinfo",
-                manifest_dir,
-                root / "metadata/package-intent.json",
+                root, root / "imagebuilder/.config", manifest_dir,
             )
             producer.write_manifest(root, PROVENANCE)
 
@@ -830,7 +984,7 @@ class ProducerBundleTests(unittest.TestCase):
             self._make_bundle(root)
             with (
                 root
-                / "imagebuilder/packages/base-files_1_aarch64_cortex-a53.apk"
+                / "imagebuilder/packages/base-files-1.apk"
             ).open("ab") as f:
                 f.write(b"tampered")
 

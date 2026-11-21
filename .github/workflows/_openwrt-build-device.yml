@@ -505,12 +505,6 @@ jobs:
           cp "$BUNDLE/imagebuilder/.targetinfo" "$BUNDLE/metadata/targetinfo"
           cp "$BUNDLE/imagebuilder/.packageinfo" "$BUNDLE/metadata/packageinfo"
           cp "$PROFILES" "$BUNDLE/metadata/profiles.json"
-          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" package-intent \
-            --config .config \
-            --profiles "$PROFILES" \
-            --packageinfo "$BUNDLE/imagebuilder/.packageinfo" \
-            --manifest-dir "$TARGET_DIR" \
-            --out "$BUNDLE/metadata/package-intent.json"
           python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" stage-recovery \
             --source-dir "$TARGET_DIR" \
             --bundle-root "$BUNDLE"
@@ -525,9 +519,15 @@ jobs:
             cp "$PRIVATE_KEY" "$BUNDLE/imagebuilder/keys/local-private-key.pem"
             trap 'rm -f "$BUNDLE/imagebuilder/keys/local-private-key.pem"' EXIT
           fi
+          rm -f "$BUNDLE/imagebuilder/packages/packages.adb"
           make -C "$BUNDLE/imagebuilder" package_index V=s
           rm -f "$BUNDLE/imagebuilder/keys/local-private-key.pem"
           trap - EXIT
+
+          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" package-intent \
+            --bundle-root "$BUNDLE" \
+            --config .config \
+            --manifest-dir "$TARGET_DIR"
 
           python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-producer.py" normalize-host-tools \
             --bundle-root "$BUNDLE"
