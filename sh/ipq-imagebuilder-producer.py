@@ -117,6 +117,36 @@ def _package_names(packageinfo: Path) -> set[str]:
     )
 
 
+def _apk_versions(
+    apk_root: Path, package_names: set[str], architecture: str
+) -> Dict[str, set[str]]:
+    """Return package versions available for target-ABI or architecture-independent APKs."""
+    versions: Dict[str, set[str]] = {}
+    if not architecture:
+        raise ProducerError("ImageBuilder config has no CONFIG_TARGET_ARCH_PACKAGES")
+    architectures = (architecture, "all", "noarch")
+    for path in apk_root.rglob("*.apk"):
+        if not path.is_file() or path.stat().st_size == 0:
+            continue
+        filename = path.name[:-4]
+        for package_arch in architectures:
+            suffix = "_" + package_arch
+            if not filename.endswith(suffix):
+                continue
+            package_version = filename[: -len(suffix)]
+            separators = [
+                index for index, char in enumerate(package_version) if char == "_"
+            ]
+            for index in reversed(separators):
+                name = package_version[:index]
+                version = package_version[index + 1 :]
+                if name in package_names and version:
+                    versions.setdefault(name, set()).add(version)
+                    break
+            break
+    return versions
+
+
 def _package_tokens(
     value: object,
     package_names: set[str],
@@ -186,13 +216,19 @@ def write_package_intent(
     """Resolve ImageBuilder package selectors from the producer configuration.
 
     The producer manifests are retained as evidence and may include runtime
-    dependencies outside the standalone ImageBuilder package pool. Selectors
-    are resolved only against ImageBuilder package metadata.
+    dependencies outside the standalone ImageBuilder package pool. Package
+    selectors are validated against package metadata and filtered by APK
+    availability for the target architecture.
     """
     package_names = _package_names(packageinfo_path)
     if not package_names:
         raise ProducerError("ImageBuilder package metadata contains no packages")
     config = _parse_config(config_path)
+    apk_versions = _apk_versions(
+        config_path.parent,
+        package_names,
+        config.get("CONFIG_TARGET_ARCH_PACKAGES", ""),
+    )
     profiles_document = json.loads(profiles_path.read_text(encoding="utf-8"))
     profiles = profiles_document.get("profiles") if isinstance(profiles_document, dict) else None
     if not isinstance(profiles, dict):
@@ -206,6 +242,7 @@ def write_package_intent(
         "profiles.json:default_packages",
         ignore_missing=True,
     )
+    common_default = [name for name in common_default if name in apk_versions]
     source_manifests = {}
     for profile_name in REQUIRED_PROFILES:
         matches = sorted(manifest_dir.glob(f"*-{profile_name}.manifest"))
@@ -219,7 +256,7 @@ def write_package_intent(
     common_names = {
         name
         for name in package_names
-        if config.get("CONFIG_PACKAGE_" + name) == "y"
+        if config.get("CONFIG_PACKAGE_" + name) == "y" and name in apk_versions
     }
     common = []
     for name in sorted(common_names):
@@ -237,13 +274,20 @@ def write_package_intent(
         profile = profiles.get(profile_name)
         if not isinstance(profile, dict):
             raise ProducerError(f"profile {profile_name} is missing from profiles.json")
-        defaults = set(common_default) | set(
-            _package_tokens(
-                profile.get("device_packages", []),
-                package_names,
-                f"profiles.json:{profile_name}:device_packages",
-            )
+        explicit_device = _package_tokens(
+            profile.get("device_packages", []),
+            package_names,
+            f"profiles.json:{profile_name}:device_packages",
         )
+        missing_explicit_device = sorted(
+            name for name in explicit_device if name not in apk_versions
+        )
+        if missing_explicit_device:
+            raise ProducerError(
+                f"explicit device packages are absent from matching-ABI APK pool "
+                f"for {profile_name}: {', '.join(missing_explicit_device)}"
+            )
+        defaults = set(common_default) | set(explicit_device)
         selector = config.get(
             "CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_" + profile_name,
             "",
@@ -252,9 +296,20 @@ def write_package_intent(
             selector, package_names, f"CONFIG_TARGET_DEVICE_PACKAGES_{profile_name}"
         )
         excluded = {token[1:] for token in configured if token.startswith("-")}
+        explicit_configured = {
+            token for token in configured if not token.startswith("-")
+        }
+        missing_configured = sorted(
+            name for name in explicit_configured if name not in apk_versions
+        )
+        if missing_configured:
+            raise ProducerError(
+                f"explicit configured packages are absent from matching-ABI APK pool "
+                f"for {profile_name}: {', '.join(missing_configured)}"
+            )
         desired_names = (
             common_names
-            | {token for token in configured if not token.startswith("-")}
+            | explicit_configured
             | defaults
         ) - excluded
         manifest = source_manifests[profile_name]

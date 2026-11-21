@@ -503,8 +503,10 @@ class ProducerBundleTests(unittest.TestCase):
             root = Path(td)
             config = root / ".config"
             config.write_text(
+                'CONFIG_TARGET_ARCH_PACKAGES="aarch64_cortex-a53"\n'
                 "CONFIG_PACKAGE_base-files=y\n"
                 "CONFIG_PACKAGE_kmod-common=y\n"
+                "CONFIG_PACKAGE_base-internal=y\n"
                 "CONFIG_PACKAGE_luci-app-a=m\n"
                 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_glinet_gl-axt1800="luci-app-a -luci-app-default"\n'
                 'CONFIG_TARGET_DEVICE_PACKAGES_qualcommax_ipq60xx_DEVICE_jdcloud_re-cs-02="luci-app-b"\n'
@@ -516,12 +518,18 @@ class ProducerBundleTests(unittest.TestCase):
                 "Package: luci-app-a\n"
                 "Package: luci-app-b\n"
                 "Package: luci-app-default\n"
+                "Package: base-internal\n"
+                "Package: default-internal\n"
             )
             profiles = root / "profiles.json"
             profiles.write_text(
                 json.dumps(
                     {
-                        "default_packages": ["nftables", "base-files"],
+                        "default_packages": [
+                            "nftables",
+                            "base-files",
+                            "default-internal",
+                        ],
                         "profiles": {
                             "glinet_gl-axt1800": {
                                 "device_packages": ["luci-app-default", "kmod-axt"]
@@ -534,6 +542,18 @@ class ProducerBundleTests(unittest.TestCase):
                 )
             )
             packageinfo.write_text(packageinfo.read_text() + "Package: kmod-axt\nPackage: kmod-jdc\n")
+            apk_dir = root / "imagebuilder/packages"
+            apk_dir.mkdir(parents=True)
+            for package, version, arch in (
+                ("base-files", "1", "aarch64_cortex-a53"),
+                ("kmod-common", "2-r1", "aarch64_cortex-a53"),
+                ("luci-app-a", "3", "all"),
+                ("luci-app-b", "4", "noarch"),
+                ("luci-app-default", "3", "all"),
+                ("kmod-axt", "5", "aarch64_cortex-a53"),
+                ("kmod-jdc", "6", "aarch64_cortex-a53"),
+            ):
+                (apk_dir / f"{package}_{version}_{arch}.apk").write_bytes(b"apk")
             output = root / "package-intent.json"
 
             manifest_dir = root / "manifests"
@@ -576,6 +596,18 @@ class ProducerBundleTests(unittest.TestCase):
                     for item in profile["expected"]
                 ],
             )
+            self.assertNotIn(
+                "base-internal",
+                [item["name"] for item in intent["common"]],
+            )
+            self.assertNotIn(
+                "default-internal",
+                [
+                    item["name"]
+                    for profile in intent["profiles"].values()
+                    for item in profile["expected"]
+                ],
+            )
 
             profiles_doc = json.loads(profiles.read_text())
             profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].append(
@@ -591,10 +623,21 @@ class ProducerBundleTests(unittest.TestCase):
 
             profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].pop()
             profiles.write_text(json.dumps(profiles_doc))
+            profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].append(
+                "base-internal"
+            )
+            profiles.write_text(json.dumps(profiles_doc))
+            with self.assertRaisesRegex(producer.ProducerError, "base-internal"):
+                producer.write_package_intent(
+                    config, profiles, packageinfo, manifest_dir, output
+                )
+            profiles_doc["profiles"]["glinet_gl-axt1800"]["device_packages"].pop()
+            profiles.write_text(json.dumps(profiles_doc))
             original_config = config.read_text()
             for selector in (
                 "missing-config-package",
                 "-missing-exclusion",
+                "base-internal",
             ):
                 with self.subTest(selector=selector):
                     config.write_text(
@@ -609,6 +652,23 @@ class ProducerBundleTests(unittest.TestCase):
                         producer.write_package_intent(
                             config, profiles, packageinfo, manifest_dir, output
                         )
+
+    def test_apk_pool_parses_longest_package_name_and_version(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "short_name_1_aarch64_cortex-a53.apk").write_bytes(b"apk")
+            (root / "long_name_2-r1_aarch64_cortex-a53.apk").write_bytes(b"apk")
+
+            versions = producer._apk_versions(
+                root,
+                {"long", "long_name", "short", "short_name"},
+                "aarch64_cortex-a53",
+            )
+
+            self.assertEqual(
+                versions,
+                {"long_name": {"2-r1"}, "short_name": {"1"}},
+            )
 
     def test_package_intent_ignores_manifest_runtime_dependencies_missing_from_packageinfo(
         self,
