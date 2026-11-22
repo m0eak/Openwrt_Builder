@@ -1,80 +1,270 @@
-name: Validate IPQ ImageBuilder Consumer
-
-on:
+name: Rehearse IPQ release assembly
+'on':
   workflow_dispatch:
     inputs:
       producer_run_id:
         description: Completed producer workflow run ID.
         required: true
         type: string
-
 permissions:
   actions: read
   contents: read
-
 jobs:
-  consumer:
-    name: Validate ${{ matrix.profile }} ImageBuilder consumer
+  image:
+    name: 构建 ${{ matrix.device }}
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        profile:
-          - glinet_gl-axt1800
-          - jdcloud_re-cs-02
+        include:
+        - profile: glinet_gl-axt1800
+          device: AXT-1800
+        - profile: jdcloud_re-cs-02
+          device: JDC-AX6600
     steps:
-      - name: Checkout validation scripts
-        uses: actions/checkout@main
+    - name: Checkout repository
+      uses: actions/checkout@main
+    - name: Download producer ImageBuilder artifact
+      uses: actions/download-artifact@main
+      with:
+        name: ipq-imagebuilder-producer-${{ inputs.producer_run_id }}
+        path: ${{ runner.temp }}/ipq-imagebuilder-producer
+        repository: ${{ github.repository }}
+        run-id: ${{ inputs.producer_run_id }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Validate producer bundle and provenance
+      shell: bash
+      env:
+        BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
+      run: |
+        set -euo pipefail
+        test -s "$BUNDLE/imagebuilder.tar.zst"
+        test -s "$BUNDLE/provenance.json"
+        test -s "$BUNDLE/SHA256SUMS"
+        python3 sh/ipq-imagebuilder-producer.py validate \
+          --bundle-root "$BUNDLE"
+    - name: Build and verify device image
+      shell: bash
+      env:
+        BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
+        WORKDIR: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}
+        PROFILE: ${{ matrix.profile }}
+      run: |
+        set -euo pipefail
+        rm -rf "$WORKDIR"
+        mkdir -p "$WORKDIR"
+        tar --zstd -xf "$BUNDLE/imagebuilder.tar.zst" \
+          -C "$WORKDIR" --strip-components=1
+        test -s "$WORKDIR/Makefile"
+        cd "$WORKDIR"
+        PACKAGE_ARGS=$(python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+          package-args \
+          --package-intent "$BUNDLE/metadata/package-intent.json" \
+          --profile "$PROFILE")
+        echo "Applying resolved package intent for $PROFILE"
+        make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+        make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
+        python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
+          restore-recovery-images \
+          --bundle-root "$BUNDLE" \
+          --workdir "$WORKDIR" \
+          --profile "$PROFILE"
+        OUTPUT_DIR="$WORKDIR/bin/targets/qualcommax/ipq60xx"
+        test -d "$OUTPUT_DIR"
+        python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
+          --workdir "$WORKDIR" \
+          --profile "$PROFILE" \
+          --package-intent "$BUNDLE/metadata/package-intent.json"
 
-      - name: Download producer ImageBuilder artifact
-        uses: actions/download-artifact@main
-        with:
-          name: ipq-imagebuilder-producer-${{ inputs.producer_run_id }}
-          path: ${{ runner.temp }}/ipq-imagebuilder-producer
-          repository: ${{ github.repository }}
-          run-id: ${{ inputs.producer_run_id }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+        manifest=$(find "$OUTPUT_DIR" -maxdepth 1 -type f \
+          -name "*-${PROFILE}.manifest" -print -quit)
+        test -n "$manifest"
+        PACKAGE_LIST_DIR="$GITHUB_WORKSPACE/package-list-${{ matrix.device }}"
+        mkdir -p "$PACKAGE_LIST_DIR"
+        python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
+          --manifest "$manifest" \
+          --out "$PACKAGE_LIST_DIR/packages.txt"
+        python3 "$GITHUB_WORKSPACE/sh/ipq-shared-build.py" package-list \
+          --manifest "$manifest" \
+          --out "$PACKAGE_LIST_DIR/packages-full.txt" \
+          --flavor ""
+        rm -rf "$OUTPUT_DIR/packages"
+    - name: Upload device firmware artifact
+      uses: actions/upload-artifact@main
+      with:
+        name: firmware-${{ matrix.device }}
+        path: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}/bin/targets/qualcommax/ipq60xx/*
+        if-no-files-found: error
+        overwrite: true
+        retention-days: 5
+    - name: Upload device package list artifact
+      uses: actions/upload-artifact@main
+      with:
+        name: package-list-${{ matrix.device }}
+        path: ${{ github.workspace }}/package-list-${{ matrix.device }}/*
+        if-no-files-found: error
+        overwrite: true
+        retention-days: 5
+  assemble_release:
+    name: Check release assets and package lists
+    needs: image
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@main
+      with:
+        persist-credentials: false
+    - name: Download firmware artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: all-artifacts
+    - name: Show downloaded artifact layout
+      shell: bash
+      run: |
+        echo "::group::Downloaded artifacts"
+        find all-artifacts -maxdepth 3 -type f -printf '%p %s bytes\n' | sort
+        echo "::endgroup::"
+    - name: Prefix generic firmware metadata files
+      shell: bash
+      run: |
+        shopt -s nullglob
+        firmware_dirs=(all-artifacts/firmware-*)
+        if [ "${#firmware_dirs[@]}" -eq 0 ]; then
+          echo "No firmware artifacts found under all-artifacts/firmware-*."
+          exit 1
+        fi
 
-      - name: Validate producer bundle and provenance
-        shell: bash
-        env:
-          BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
-        run: |
-          set -euo pipefail
-          test -s "$BUNDLE/imagebuilder.tar.zst"
-          test -s "$BUNDLE/provenance.json"
-          test -s "$BUNDLE/SHA256SUMS"
-          test -s "$BUNDLE/metadata/package-intent.json"
-          python3 sh/ipq-imagebuilder-producer.py validate \
-            --bundle-root "$BUNDLE"
+        echo "::group::Prefix firmware metadata"
+        for dir in "${firmware_dirs[@]}"; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "Processing device: $DEVICE_NAME"
+          cd "$dir"
+          for file in version.buildinfo sha256sums profiles.json config.buildinfo feeds.buildinfo; do
+            if [ -f "$file" ]; then
+              mv "$file" "${DEVICE_NAME}-${file}"
+            fi
+          done
+          if [ -f "${DEVICE_NAME}-sha256sums" ]; then
+            python3 - "$DEVICE_NAME" <<'PY'
+        import sys
+        from pathlib import Path
 
-      - name: Build and verify ImageBuilder consumer
-        shell: bash
-        env:
-          BUNDLE: ${{ runner.temp }}/ipq-imagebuilder-producer
-          WORKDIR: ${{ runner.temp }}/imagebuilder-${{ matrix.profile }}
-          PROFILE: ${{ matrix.profile }}
-        run: |
-          set -euo pipefail
-          rm -rf "$WORKDIR"
-          mkdir -p "$WORKDIR"
-          tar --zstd -xf "$BUNDLE/imagebuilder.tar.zst" \
-            -C "$WORKDIR" --strip-components=1
-          test -s "$WORKDIR/Makefile"
-          cd "$WORKDIR"
-          PACKAGE_ARGS=$(python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
-            package-args \
-            --package-intent "$BUNDLE/metadata/package-intent.json" \
-            --profile "$PROFILE")
-          make manifest "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
-          make image "PROFILE=$PROFILE" "PACKAGES=$PACKAGE_ARGS"
-          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" \
-            restore-recovery-images \
-            --bundle-root "$BUNDLE" \
-            --workdir "$WORKDIR" \
-            --profile "$PROFILE"
-          test -d "$WORKDIR/bin/targets/qualcommax/ipq60xx"
-          python3 "$GITHUB_WORKSPACE/sh/ipq-imagebuilder-consumer.py" verify \
-            --workdir "$WORKDIR" \
-            --profile "$PROFILE" \
-            --package-intent "$BUNDLE/metadata/package-intent.json"
+        device = sys.argv[1]
+        checksums = Path(f"{device}-sha256sums")
+        renamed = {
+            name: f"{device}-{name}"
+            for name in ("version.buildinfo", "profiles.json", "config.buildinfo", "feeds.buildinfo")
+        }
+        lines = []
+        for line in checksums.read_text().splitlines():
+            if not line.strip():
+                continue
+            digest, name = line.split(maxsplit=1)
+            if name.startswith("*"):
+                name = name[1:]
+            lines.append(f"{digest} *{renamed.get(name, name)}\n")
+        checksums.write_text("".join(lines))
+        PY
+          fi
+          cd ../..
+        done
+        echo "::endgroup::"
+    - name: Generate release tag and body
+      id: release-meta
+      shell: bash
+      run: |
+        DATE_SUFFIX=$(date +"%Y%m%d-%H%M")
+        RELEASE_TAG="IPQ60xx-25.12-25.12.6-${DATE_SUFFIX}"
+        echo "release_tag=$RELEASE_TAG" >> "$GITHUB_ENV"
+        echo "release-tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
+        echo "### Firmware download" > release-body.md
+        echo "" >> release-body.md
+        echo "This release includes firmware for:" >> release-body.md
+        for dir in all-artifacts/firmware-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/firmware-//')
+          echo "- **$DEVICE_NAME**" >> release-body.md
+        done
+
+        if [ -n "https://github.com/m0eak/libwrt.git" ]; then
+          echo "" >> release-body.md
+          echo "**Source repository:** \`https://github.com/m0eak/libwrt.git\`" >> release-body.md
+        fi
+        if [ -n "25.12.6" ]; then
+          echo "**Source branch/tag:** \`25.12.6\`" >> release-body.md
+        fi
+
+        echo "" >> release-body.md
+        echo "---" >> release-body.md
+        echo "### LuCI package list" >> release-body.md
+        for dir in all-artifacts/package-list-*; do
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          echo "" >> release-body.md
+          echo "#### $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages.txt" >> release-body.md
+        done
+
+        full_package_heading_written=false
+        for dir in all-artifacts/package-list-*; do
+          [ -f "$dir/packages-full.txt" ] || continue
+          if [ "$full_package_heading_written" = false ]; then
+            echo "" >> release-body.md
+            echo "### Full package list (from image manifest)" >> release-body.md
+            full_package_heading_written=true
+          fi
+          DEVICE_NAME=$(basename "$dir" | sed 's/package-list-//')
+          echo "" >> release-body.md
+          echo "#### $DEVICE_NAME" >> release-body.md
+          sed 's/^/- /' "$dir/packages-full.txt" >> release-body.md
+        done
+
+        echo "::group::Release metadata"
+        echo "release-tag=$RELEASE_TAG"
+        sed -n '1,160p' release-body.md
+        echo "::endgroup::"
+    - name: Check assembled release without publishing
+      shell: bash
+      run: |
+        set -euo pipefail
+        python3 - <<'CHECK'
+        from pathlib import Path
+        import json
+        import subprocess
+        import os
+
+        output = Path('all-artifacts')
+        release = Path('release-body.md').read_text()
+        contract = json.loads(Path('sh/ipq-image-contract.json').read_text())['profiles']
+        profiles = {'AXT-1800': 'glinet_gl-axt1800', 'JDC-AX6600': 'jdcloud_re-cs-02'}
+        assert {p.name for p in output.iterdir()} == {prefix + device for prefix in ('firmware-', 'package-list-') for device in profiles}
+        assets = set()
+        results = []
+        assert '### LuCI package list' in release and '### Full package list (from image manifest)' in release
+        for device, profile in profiles.items():
+            firmware = output / f'firmware-{device}'
+            files = {p.name for p in firmware.iterdir() if p.is_file() and not p.name.startswith('.')}
+            duplicates = assets & files
+            assert not duplicates, f'duplicate release assets: {sorted(duplicates)}'
+            assets |= files
+            required = contract[profile]['required_images']
+            assert set(required) <= files, f'missing firmware for {device}: {set(required) - files}'
+            checksums = firmware / f'{device}-sha256sums'
+            checked = {line.split(maxsplit=1)[1].lstrip('*').removeprefix('./') for line in checksums.read_text().splitlines() if line.strip()}
+            assert set(required) <= checked, f'firmware not covered by release checksums for {device}'
+            subprocess.run(['sha256sum', '--strict', '--check', checksums.name], cwd=firmware, check=True)
+            manifest, = firmware.glob(f'*-{profile}.manifest')
+            names = {line.split()[0] for line in manifest.read_text().splitlines() if line.strip()}
+            lists = output / f'package-list-{device}'
+            full = (lists / 'packages-full.txt').read_text().splitlines()
+            luci = (lists / 'packages.txt').read_text().splitlines()
+            assert full == sorted(names), f'full package list does not match {device} manifest'
+            assert luci == sorted(name for name in names if name.startswith('luci-app')), f'LuCI list does not match {device} manifest'
+            assert release.count(f'#### {device}\n') == 2
+            assert all(f'- {name}\n' in release for name in names)
+            summary = f'{device}: {len(required)} firmware images, {len(checked)} SHA-256 entries, {len(full)} packages, {len(luci)} LuCI apps'
+            print(summary)
+            results.append(summary)
+        print(f'{len(assets)} unique release assets')
+        with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+            summary.write('\n'.join(f'- {result}' for result in results) + f'\n- {len(assets)} unique release assets\n')
+        CHECK
