@@ -330,7 +330,7 @@ def verify_outputs(
                 version != "*" and manifest_packages.get(name) != version
             ) or (version == "*" and name not in manifest_packages)
         )
-        present_excluded = sorted(excluded & manifest_packages)
+        present_excluded = sorted(excluded & manifest_packages.keys())
         if missing_packages or present_excluded:
             details = []
             if missing_packages:

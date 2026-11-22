@@ -240,6 +240,51 @@ class ConsumerFixtureTests(unittest.TestCase):
                 self.assertEqual(result["profile"], profile)
                 self.assertEqual(result["images"], [image_name])
 
+    def test_verify_outputs_checks_selected_and_excluded_package_intent(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            profile = "glinet_gl-axt1800"
+            workdir, _ = self._write_output_fixture(root, profile)
+            exact = {"name": "base-files", "version": "1-r1"}
+            wildcard = {"name": "dnsmasq-full", "version": "*"}
+            intent_path = root / "package-intent.json"
+            intent_path.write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "common": [exact],
+                        "profiles": {
+                            name: {
+                                "packages": [wildcard],
+                                "expected": [exact, wildcard],
+                                "excluded": ["dnsmasq"],
+                            }
+                            for name in PROFILES
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            manifest = (
+                workdir
+                / consumer.IMAGEBUILDER_BIN_DIR
+                / f"openwrt-qualcommax-ipq60xx-{profile}.manifest"
+            )
+            selected = "base-files - 1-r1\ndnsmasq-full - 2.90-r1\n"
+            manifest.write_text(selected, encoding="utf-8")
+
+            result = consumer.verify_outputs(
+                workdir, profile, package_intent_path=intent_path
+            )
+            self.assertEqual(result["verified_package_count"], 2)
+            self.assertEqual(result["verified_exclusions"], ["dnsmasq"])
+
+            manifest.write_text(selected + "dnsmasq - 2.90-r1\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                consumer.ConsumerError, "excluded packages are present: dnsmasq"
+            ):
+                consumer.verify_outputs(workdir, profile, package_intent_path=intent_path)
+
     def test_verify_outputs_rejects_missing_declared_image(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
