@@ -39,7 +39,7 @@ def _digest(path: Path) -> str:
     return hasher.hexdigest()
 
 
-def _checksum_records(path: Path) -> Dict[str, str]:
+def _checksum_records(path: Path, *, preserve_paths: bool = False) -> Dict[str, str]:
     if not path.is_file():
         raise ConsumerError(f"checksum file is missing: {path.name}")
     records = {}
@@ -48,10 +48,11 @@ def _checksum_records(path: Path) -> Dict[str, str]:
         if len(fields) != 2 or not re.fullmatch(r"[0-9a-fA-F]{64}", fields[0]):
             continue
         filename = fields[1].lstrip("*").removeprefix("./")
-        basename = Path(filename).name
-        if basename in records and records[basename] != fields[0].lower():
-            raise ConsumerError(f"conflicting checksum entries for {basename}")
-        records[basename] = fields[0].lower()
+        key = PurePosixPath(filename).as_posix() if preserve_paths else Path(filename).name
+        digest = fields[0].lower()
+        if key in records and records[key] != digest:
+            raise ConsumerError(f"conflicting checksum entries for {key}")
+        records[key] = digest
     return records
 
 
@@ -127,7 +128,7 @@ def restore_recovery_images(bundle_root: Path, workdir: Path, profile_name: str)
     profile_records = records.get(profile_name) if isinstance(records, dict) else None
     if not isinstance(profile_records, dict):
         raise ConsumerError(f"producer recovery image is missing for {profile_name}")
-    bundle_sums = _checksum_records(bundle / "SHA256SUMS")
+    bundle_sums = _checksum_records(bundle / "SHA256SUMS", preserve_paths=True)
     restored = []
     for image_name in PRODUCER_FALLBACK_IMAGES[profile_name]:
         target = output_dir / image_name
@@ -145,7 +146,7 @@ def restore_recovery_images(bundle_root: Path, workdir: Path, profile_name: str)
             not source.is_file()
             or not source.stat().st_size
             or _digest(source) != digest
-            or bundle_sums.get(image_name) != digest
+            or bundle_sums.get(expected_path) != digest
         ):
             raise ConsumerError(
                 f"producer recovery image checksum failed for {profile_name}: {image_name}"

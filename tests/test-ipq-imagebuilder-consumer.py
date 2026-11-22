@@ -291,27 +291,36 @@ class ConsumerFixtureTests(unittest.TestCase):
             fallback = consumer.PRODUCER_FALLBACK_IMAGES[profile][0]
             (output_dir / fallback).unlink()
             bundle = root / "bundle"
-            recovery = bundle / "recovery" / profile
-            recovery.mkdir(parents=True)
+            image_path = f"recovery/{profile}/{fallback}"
+            other_image_path = f"recovery/jdcloud_re-cs-02/{fallback}"
             contents = b"producer image for AXT only"
-            (recovery / fallback).write_bytes(contents)
+            digest = hashlib.sha256(contents).hexdigest()
+            checksum_lines = []
+            for relative, data in (
+                ("imagebuilder/.config", b"imagebuilder config"),
+                ("imagebuilder/staging_dir/target/.config", b"target config"),
+                (other_image_path, contents),
+                (image_path, contents),
+            ):
+                source = bundle / relative
+                source.parent.mkdir(parents=True, exist_ok=True)
+                source.write_bytes(data)
+                checksum_lines.append(f"{hashlib.sha256(data).hexdigest()} *./{relative}\n")
             (bundle / "recovery" / "images.json").write_text(
                 json.dumps(
                     {
                         profile: {
                             fallback: {
-                                "path": f"recovery/{profile}/{fallback}",
-                                "sha256": hashlib.sha256(contents).hexdigest(),
+                                "path": image_path,
+                                "sha256": digest,
                             }
                         }
                     }
                 ),
                 encoding="utf-8",
             )
-            (bundle / "SHA256SUMS").write_text(
-                f"{hashlib.sha256(contents).hexdigest()}  recovery/{profile}/{fallback}\n",
-                encoding="utf-8",
-            )
+            sums_path = bundle / "SHA256SUMS"
+            sums_path.write_text("".join(checksum_lines), encoding="utf-8")
 
             consumer.restore_recovery_images(bundle, workdir, profile)
             result = consumer.verify_outputs(workdir, profile)
@@ -320,6 +329,18 @@ class ConsumerFixtureTests(unittest.TestCase):
             self.assertIn(fallback, result["required_images"])
             with self.assertRaisesRegex(consumer.ConsumerError, "recovery image"):
                 consumer.restore_recovery_images(bundle, workdir, "jdcloud_re-cs-02")
+
+            (output_dir / fallback).unlink()
+            sums_path.write_text(f"{digest}  {other_image_path}\n", encoding="utf-8")
+            with self.assertRaisesRegex(consumer.ConsumerError, "recovery image checksum failed"):
+                consumer.restore_recovery_images(bundle, workdir, profile)
+
+            sums_path.write_text(
+                f"{digest}  {image_path}\n{'0' * 64} *./{image_path}\n",
+                encoding="utf-8",
+            )
+            with self.assertRaisesRegex(consumer.ConsumerError, "conflicting checksum entries"):
+                consumer.restore_recovery_images(bundle, workdir, profile)
 
     def test_verify_outputs_accepts_root_profiles_fallback(self):
         with tempfile.TemporaryDirectory() as td:
